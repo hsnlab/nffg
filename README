@@ -1,0 +1,4 @@
+Python-based implementation of Network Function Fowarding Graph used by ESCAPE
+
+Dependencies:
+	$ sudo apt update && sudo apt install networkx
