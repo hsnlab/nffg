@@ -10,7 +10,9 @@ Dependencies:
 
 ## Contact
 Janos Czentye, janos.czentye@tmit.bme.hu
+
 Balazs Nemeth, balazs.nemeth@tmit.bme.hu
+
 Balazs Sonkoly, balazs.sonkoly@tmit.bme.hu 
 
 Licensed under the Apache License, Version 2.0
