@@ -5,6 +5,13 @@ from nffg import NFFGToolBox, NFFG
 
 
 def _calculate_diffs (old_path, new_path):
+  """
+  Calculate and print the difference of the two :any:`NFFG` given by it"s path.
+
+  :param old_path: file path of the original :any:`NFFG`
+  :param new_path: file path of the modified :any:`NFFG`
+  :return: None
+  """
   print "Calculate the difference NFFGs..."
   old = NFFG.parse_from_file(old_path)
   new = NFFG.parse_from_file(new_path)

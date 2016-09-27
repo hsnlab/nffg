@@ -33,6 +33,7 @@ class Persistable(object):
     """
     Common function to persist the actual element into a plain text format.
 
+    :raise: :any:`exceptions.NotImplementedError`
     :return: generated object structure fit to JSON
     :rtype: object
     """
@@ -42,6 +43,7 @@ class Persistable(object):
     """
     Common function to fill self with data from JSON data.
 
+    :raise: :any:`exceptions.NotImplementedError`
     :param data: object structure in JSON
     :return: self
     """
@@ -118,6 +120,12 @@ class Element(Persistable):
     return self.id
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     # Need to override
     element = OrderedDict(id=self.id)
     if self.operation is not None:
@@ -127,12 +135,25 @@ class Element(Persistable):
     return element
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     self.id = data['id']
     self.operation = data.get("operation")  # optional
     self.status = data.get("status")  # optional
     return self
 
   def copy (self):
+    """
+    Return the copy of the object.
+
+    :return: copied object
+    :rtype: :any:`Element`
+    """
     from copy import deepcopy
     return deepcopy(self)
 
@@ -141,6 +162,14 @@ class Element(Persistable):
   ##############################################################################
 
   def __getitem__ (self, item):
+    """
+    Return the attribute of the element given by ``item``.
+
+    :param item: attribute name
+    :type item: str or int
+    :return: attribute
+    :rtype: object
+    """
     if hasattr(self, item):
       return getattr(self, item)
     else:
@@ -148,6 +177,16 @@ class Element(Persistable):
         "%s object has no key: %s" % (self.__class__.__name__, item))
 
   def __setitem__ (self, key, value):
+    """
+    Set the attribute given by ``key`` with ``value``:
+
+    :param key: attribute name
+    :type key: str or int
+    :param value: new value
+    :type value: object
+    :return: new value
+    :rtype: object
+    """
     if hasattr(self, key):
       return setattr(self, key, value)
     else:
@@ -155,22 +194,60 @@ class Element(Persistable):
         "%s object has no key: %s" % (self.__class__.__name__, key))
 
   def __contains__ (self, item):
+    """
+    Return true if the given ``item`` is exist.
+
+    :param item: searched attribute name
+    :type item: str or int
+    :return: given item is exist or not
+    :rtype: bool
+    """
     return hasattr(self, item)
 
   def get (self, item, default=None):
+    """
+    Return with the attribute given by ``item``, else ``default``.
+
+    :param item: searched attribute name
+    :type item: str
+    :param default: default value
+    :type default: object
+    :return: found attribute or default
+    :rtype: object
+    """
     try:
       return self[item]
     except KeyError:
       return default
 
   def setdefault (self, key, default=None):
+    """
+    Set the attribute given by ``key``. Use the ``default`` value is it is
+    not given.
+
+    :param key: attribute name
+    :type key: str or int
+    :param default: default value
+    :type default: object
+    :return: None
+    """
     if key not in self:
       self[key] = default
 
   def clear (self):
+    """
+    Overrided for safety reasons.
+
+    :raise: :any:`exceptions.RuntimeError`
+    """
     raise RuntimeError("This standard dict functions is not supported by NFFG!")
 
   def update (self, dict2):
+    """
+    Overrided for safety reasons.
+
+    :raise: :any:`exceptions.RuntimeError`
+    """
     raise RuntimeError(
       "This standard dict functions is not supported by NFFG! self: %s dict2: "
       "%s" % (self, dict2))
@@ -198,6 +275,7 @@ class L3Address(Element):
     :type requested: str
     :param provided: provided IP
     :type provided: str
+    :return: None
     """
     super(L3Address, self).__init__(id=id, type="L3ADDRESS")
     self.name = name
@@ -207,6 +285,13 @@ class L3Address(Element):
     self.provided = provided
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(L3Address, self).load(data=data)
     self.name = data.get('name')
     self.configure = data.get('configure')
@@ -215,6 +300,12 @@ class L3Address(Element):
     return self
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     l3 = super(L3Address, self).persist()
     if self.name is not None:
       l3['name'] = self.name
@@ -235,22 +326,57 @@ class L3AddressContainer(Persistable):
   """
 
   def __init__ (self, container=None):
+    """
+    Init.
+
+    :param container: optional container for L3 addresses.
+    :type container: collection.Iterable
+    :return: None
+    """
     super(L3AddressContainer, self).__init__()
     self.container = container if container is not None else []
 
   def __getitem__ (self, id):
+    """
+    Return with the :any:`L3Address` given by ``id``.
+
+    :param id: L3 address id
+    :type id: str or int
+    :return: L3 address
+    :rtype: :any:`L3Address`
+    """
     for l3 in self.container:
       if l3.id == id:
         return l3
     raise KeyError("L3 address with id: %s is not defined!" % id)
 
   def __iter__ (self):
+    """
+    Return with an iterator over the container.
+
+    :return: iterator
+    :rtype: collection.Iterable
+    """
     return iter(self.container)
 
   def __len__ (self):
+    """
+    Return the number of stored :any:`L3Address`.
+
+    :return: number of addresses
+    :rtype: int
+    """
     return len(self.container)
 
   def __contains__ (self, item):
+    """
+    Return True if address given by ``id`` is exist in the container.
+
+    :param item: address object
+    :type: :any:`L3Address`
+    :return: found address or not
+    :rtype: bool
+    """
     if not isinstance(item, L3Address):
       raise RuntimeError(
         "L3AddressContainer's operator \"in\" works only with L3Address "
@@ -258,31 +384,95 @@ class L3AddressContainer(Persistable):
     return item in self.container
 
   def append (self, item):
+    """
+    Add a new address to the container.
+
+    :param item: address object
+    :type: :any:`L3Address`
+    :return: added address
+    :rtype: :any:`L3Address`
+    """
     self.container.append(item)
     return item
 
   def remove (self, item):
+    """
+    Remove L3 address from container.
+
+    :param item: address object
+    :type: :any:`L3Address`
+    :return: removed address
+    :rtype: :any:`L3Address`
+    """
     return self.container.remove(item)
 
   def clear (self):
+    """
+    Remove all the stored address from container.
+
+    :return: None
+    """
     del self.container[:]
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return str(self.container)
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return str(self)
 
   def add_l3address (self, id, name=None, configure=None, client=None,
                      requested=None, provided=None):
+    """
+    Add a new address to the container based on given :any:`L3Address`
+    attributes.
+
+    :param id: optional id
+    :type id: str or int
+    :param name: optional name
+    :type name: str
+    :param configure: request address
+    :type configure: bool
+    :param client: client of the address request
+    :type client: str
+    :param requested: requested IP
+    :type requested: str
+    :param provided: provided IP
+    :type provided: str
+    :return: None
+    """
     self.container.append(
       L3Address(id, name=name, configure=configure, client=client,
                 requested=requested, provided=provided))
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: list
+    """
     return [l3.persist() for l3 in self.container]
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     for item in data:
       self.add_l3address(id=item['id'], name=item.get('name'),
                          configure=item.get('configure'),
@@ -297,6 +487,7 @@ class Port(Element):
   """
   # Port type
   TYPE = "PORT"
+  """Port type"""
 
   def __init__ (self, node, id=None, name=None, properties=None, sap=None,
                 capability=None, technology=None, delay=None, bandwidth=None,
@@ -311,6 +502,10 @@ class Port(Element):
     :type id: str or int
     :param properties: supported properties of the port
     :type properties: str or iterable(str)
+    :param name: optional name
+    :type name: str
+    :param name: optional capabilities
+    :type name: str
     :param sap: inter-domain SAP identifier
     :type sap: str
     :param technology: supported technologies
@@ -363,6 +558,12 @@ class Port(Element):
 
   @property
   def node (self):
+    """
+    Return with the container reference.
+
+    :return: container reference
+    :rtype: :any:`Persistable`
+    """
     # return self.__node()
     return self.__node
 
@@ -473,6 +674,12 @@ class Port(Element):
     return self.metadata.get(name)
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     port = super(Port, self).persist()
     if self.properties:
       port["property"] = self.properties.copy()
@@ -501,8 +708,8 @@ class Port(Element):
         port['control']['controller'] = self.controller
       if self.orchestrator is not None:
         port['control']['orchestrator'] = self.orchestrator
-    if any(
-          v is not None for v in (self.l2, self.l4, True if self.l3 else None)):
+    if any(v is not None for v in
+           (self.l2, self.l4, True if self.l3 else None)):
       port['addresses'] = {}
       if self.l2 is not None:
         port['addresses']['l2'] = self.l2
@@ -515,6 +722,13 @@ class Port(Element):
     return port
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(Port, self).load(data=data)
     self.properties = OrderedDict(data.get('property', ()))
     self.sap = data.get('sap')
@@ -543,6 +757,12 @@ class Port(Element):
     return self
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return "%s(node: %s, id: %s)" % (
       self.__class__.__name__, self.node.id, self.id)
 
@@ -557,7 +777,7 @@ class PortContainer(Persistable):
     >>> cont["port_id"]
   """
 
-  def   __init__ (self, container=None):
+  def __init__ (self, container=None):
     """
     Init.
 
@@ -567,18 +787,46 @@ class PortContainer(Persistable):
     self.container = container if container is not None else []
 
   def __getitem__ (self, id):
+    """
+    Return with the :any:`Port` given by ``id``.
+
+    :param id: port id
+    :type id: str or int
+    :return: port object
+    :rtype: :any:`Port`
+    """
     for port in self.container:
       if port.id == id:
         return port
     raise KeyError("Port with id: %s is not defined!" % id)
 
   def __iter__ (self):
+    """
+    Return with an iterator over the container.
+
+    :return: iterator
+    :rtype: collection.Iterable
+    """
     return iter(self.container)
 
   def __len__ (self):
+    """
+    Return the number of stored :any:`Port`.
+
+    :return: number of ports
+    :rtype: int
+    """
     return len(self.container)
 
   def __contains__ (self, item):
+    """
+    Return True if port given by ``id`` is exist in the container.
+
+    :param item: port object
+    :type: :any:`Port`
+    :return: found port or not
+    :rtype: bool
+    """
     # this type checking is important because with Port ID input the function
     # would silently return False!
     if isinstance(item, Port):
@@ -597,28 +845,73 @@ class PortContainer(Persistable):
     return chain(*[port.flowrules for port in self.container])
 
   def append (self, item):
+    """
+    Add new port object to the container.
+
+    :param item: port object
+    :type item: :any:`Port`
+    :return: added object
+    :rtype: :any:`Port`
+    """
     self.container.append(item)
     return item
 
   def remove (self, item):
+    """
+    Remove port object from the container.
+
+    :param item: port object
+    :type item: :any:`Port`
+    :return: None
+    """
     try:
       return self.container.remove(item)
     except ValueError:
       return
 
   def clear (self):
+    """
+    Remove all the stored objects.
+
+    :return: None
+    """
     del self.container[:]
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return str(self.container)
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return str(self)
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: list
+    """
     return [port.persist() for port in self.container]
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     pass
 
 
@@ -628,6 +921,7 @@ class Node(Element):
   """
   # Class of the contained ports
   PORT_CLASS = Port
+  """Class of the contained ports"""
   # Node type constants:
   # Infrastructure node --> abstract node represents one or more physical node
   INFRA = "INFRA"
@@ -657,6 +951,12 @@ class Node(Element):
 
   @property
   def short_name (self):
+    """
+    Return a generic shor name.
+
+    :return: short name
+     :rtype: str
+    """
     return self.name if self.name else "id: %s" % self.id
 
   def flowrules (self):
@@ -677,8 +977,32 @@ class Node(Element):
 
     :param id: optional id
     :type id: str or int
-    :param properties: supported properties of the port (one or more as list)
+    :param properties: supported properties of the port
     :type properties: str or iterable(str)
+    :param name: optional name
+    :type name: str
+    :param sap: inter-domain SAP identifier
+    :type sap: str
+    :param capability: optional capabilities
+    :type capability: str
+    :param technology: supported technologies
+    :type technology: str
+    :param delay: delay
+    :type delay: float
+    :param bandwidth: bandwidth
+    :type bandwidth: float
+    :param cost: cost
+    :type cost: str
+    :param controller: controller URL
+    :type controller: str
+    :param orchestrator: orchestrator URL
+    :type orchestrator: str
+    :param l2: l2 address
+    :param l2: str
+    :param l4: l4 fields
+    :type l4: str
+    :param metadata: metadata related to Node
+    :type metadata: dict
     :return: newly created and stored Port object
     :rtype: :any:`Port`
     """
@@ -770,6 +1094,12 @@ class Node(Element):
     return self.metadata.get(name)
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     node = super(Node, self).persist()
     if self.name is not None:
       node["name"] = self.name
@@ -781,6 +1111,13 @@ class Node(Element):
     return node
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(Node, self).load(data=data)
     self.name = data.get('name')  # optional
     for item in data.get('ports', ()):
@@ -791,10 +1128,22 @@ class Node(Element):
     return self
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return "<|ID: %s, Type: %s --> %s|>" % (
       self.id, self.type, super(Element, self).__repr__())
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "%s(id:%s, type:%s)" % (self.__class__.__name__, self.id, self.type)
 
 
@@ -827,8 +1176,8 @@ class Link(Element):
     :return: None
     """
     super(Link, self).__init__(id=id, type=type)
-    if (src is not None and not isinstance(src, Port)) or (
-           dst is not None and not isinstance(dst, Port)):
+    if (src is not None and not isinstance(src, Port)) or \
+       (dst is not None and not isinstance(dst, Port)):
       raise RuntimeError("Src and dst must be Port objects!")
     # Reference to src Port object
     self.src = src  # mandatory
@@ -836,6 +1185,12 @@ class Link(Element):
     self.dst = dst  # mandatory
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     link = super(Link, self).persist()
     link['src_node'] = self.src.node.id
     link['src_port'] = self.src.id
@@ -844,6 +1199,15 @@ class Link(Element):
     return link
 
   def load (self, data, container=None, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :param container: main container node
+    :type container: :any:`NFFGModel`
+    :return: None
+    """
     if container is None:
       raise RuntimeError(
         "Container reference is not given for edge endpoint lookup!")
@@ -857,6 +1221,12 @@ class Link(Element):
     return self
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return "<|ID: %s, Type: %s, src: %s[%s], dst: %s[%s] --> %s|>" % (
       self.id, self.type, self.src.node.id, self.src.id, self.dst.node.id,
       self.dst.id, super(Element, self).__repr__())
@@ -899,7 +1269,7 @@ class NodeResource(Persistable):
     self.delay = delay
     self.bandwidth = bandwidth
 
-  def subtractNodeRes (self, substrahend, maximal, link_count=1):
+  def subtractNodeRes (self, subtrahend, maximal, link_count=1):
     """
     Subtracts the subtrahend nffg_elements.NodeResource object from the current.
     Note: only delay component is not subtracted, for now we neglect the load`s
@@ -907,40 +1277,46 @@ class NodeResource(Persistable):
     should be subtracted. Throw exception if any field of the 'current' would 
     exceed 'maximal' or get below zero.
 
-    :param substrahend: the object to be subtracted from current
-    :type substrahend: NodeResource
+    :param subtrahend: the object to be subtracted from current
+    :type subtrahend: NodeResource
     :param maximal: The maximal value which must not be exceeded.
     :type maximal: NodeResource
     :param link_count: how many times the should the bandwidth component be
       subtracted.
     :type link_count: int
+    :return: self resource object
+    :rtype: :any:`NodeResource`
     """
     attrlist = ['cpu', 'mem', 'storage', 'bandwidth']  # delay excepted!
     if reduce(lambda a, b: a or b, (self[attr] is None for attr in attrlist)):
       raise RuntimeError("Node resource components should always be given"
                          "One of %s`s components is None" % str(self))
     if not reduce(lambda a, b: a and b,
-                  (-1e-6 <= self[attr] - substrahend[attr] <= maximal[
-                    attr] + 1e-6
-                   for attr in attrlist if
-                   attr != 'bandwidth' and substrahend[attr] is not None)):
+                  (-1e-6 <= self[attr] - subtrahend[attr] <= maximal[
+                    attr] + 1e-6 for attr in attrlist if
+                   attr != 'bandwidth' and subtrahend[attr] is not None)):
       raise RuntimeError("Node resource got below zero, or "
                          "exceeded the maximal value!")
-    if substrahend['bandwidth'] is not None:
-      if not -1e-6 <= self['bandwidth'] - link_count * substrahend[
-        'bandwidth'] \
-         <= maximal['bandwidth'] + 1e-6:
+    if subtrahend['bandwidth'] is not None:
+      if not -1e-6 <= self['bandwidth'] - link_count * subtrahend[
+        'bandwidth'] <= maximal['bandwidth'] + 1e-6:
         raise RuntimeError("Internal bandwidth cannot get below "
                            "zero, or exceed the maximal value!")
     for attr in attrlist:
       k = 1
       if attr == 'bandwidth':
         k = link_count
-      if substrahend[attr] is not None:
-        self[attr] -= k * substrahend[attr]
+      if subtrahend[attr] is not None:
+        self[attr] -= k * subtrahend[attr]
     return self
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     res = OrderedDict()
     if self.cpu is not None:
       res["cpu"] = self.cpu
@@ -955,6 +1331,13 @@ class NodeResource(Persistable):
     return res
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     self.cpu = float(data['cpu']) if 'cpu' in data else None
     self.mem = float(data['mem']) if 'mem' in data else None
     self.storage = float(data['storage']) if 'storage' in data else None
@@ -963,6 +1346,14 @@ class NodeResource(Persistable):
     return self
 
   def __getitem__ (self, item):
+    """
+    Return the resource attribute given by ``item``:
+
+    :param item: attribute name
+    :type item: str
+    :return: attribute value
+    :rtype: int or object
+    """
     if hasattr(self, item):
       return getattr(self, item)
     else:
@@ -970,6 +1361,15 @@ class NodeResource(Persistable):
         "%s object has no key: %s" % (self.__class__.__name__, item))
 
   def __setitem__ (self, key, value):
+    """
+    Set the resource attribute given by ``key`` with ``value``:
+
+    :param key: attribute name
+    :type key: str
+    :param value: new value
+    :type value: int or object
+    :return: None
+    """
     if hasattr(self, key):
       return setattr(self, key, value)
     else:
@@ -977,12 +1377,24 @@ class NodeResource(Persistable):
         "%s object has no key: %s" % (self.__class__.__name__, key))
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return "Resources of %s:\ncpu: %s\nmem: %s\nstorage: %s\nbandwidth: " \
            "%s\ndelay: %s" % (
              self.__class__.__name__, self.cpu, self.mem, self.storage,
              self.bandwidth, self.delay)
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "cpu: %s mem: %s storage: %s bandwidth: %s delay: %s" % (
       self.cpu, self.mem, self.storage, self.bandwidth, self.delay)
 
@@ -1017,6 +1429,12 @@ class Flowrule(Element):
     self.delay = delay
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     flowrule = super(Flowrule, self).persist()
     if self.match:
       flowrule['match'] = self.match
@@ -1031,6 +1449,13 @@ class Flowrule(Element):
     return flowrule
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(Flowrule, self).load(data=data)
     self.match = data.get('match')
     self.action = data.get('action')
@@ -1040,12 +1465,23 @@ class Flowrule(Element):
     return self
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return "Flowrule object:\nmatch: %s \naction: %s \nhop: %s \nbandwidth: " \
-           "%s " \
-           "\ndelay: %s" % (
+           "%s \ndelay: %s" % (
              self.match, self.action, self.hop_id, self.bandwidth, self.delay)
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "%s(match: %s, action: %s, hop: %s, bandwidth: %s, delay: %s)" % (
       self.__class__.__name__, self.match, self.action, self.hop_id,
       self.bandwidth, self.delay)
@@ -1138,6 +1574,12 @@ class InfraPort(Port):
     del self.flowrules[:]
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     port = super(InfraPort, self).persist()
     flowrules = [f.persist() for f in self.flowrules]
     if flowrules:
@@ -1145,6 +1587,13 @@ class InfraPort(Port):
     return port
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(InfraPort, self).load(data=data)
     for flowrule in data.get('flowrules', ()):
       self.add_flowrule(
@@ -1187,6 +1636,12 @@ class NodeNF(Node):
     # container
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     node = super(NodeNF, self).persist()
     if self.functional_type is not None:
       node["functional_type"] = self.functional_type
@@ -1201,6 +1656,13 @@ class NodeNF(Node):
     return node
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(NodeNF, self).load(data=data)
     self.functional_type = data.get('functional_type')
     if 'specification' in data:
@@ -1210,6 +1672,12 @@ class NodeNF(Node):
     return self
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "%s(id:%s, type:%s)" % (
       self.__class__.__name__, self.id, self.functional_type)
 
@@ -1239,18 +1707,43 @@ class NodeSAP(Node):
     self.binding = binding
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "SAP(id: %s, name: %s)" % (self.id, self.name)
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return super(NodeSAP, self).__repr__()
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     sap = super(NodeSAP, self).persist()
     if self.binding is not None:
       sap['binding'] = self.binding
     return sap
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(NodeSAP, self).load(data=data)
     self.binding = data.get('binding')
     return self
@@ -1298,18 +1791,47 @@ class NodeInfra(Node):
       # Set resource container
     self.resources = res if res is not None else NodeResource()
 
-  def add_port (self, id=None, properties=None):
+  def add_port (self, id=None, name=None, properties=None, sap=None,
+                capability=None, technology=None, delay=None, bandwidth=None,
+                cost=None, controller=None, orchestrator=None, l2=None, l4=None,
+                metadata=None):
     """
     Add a port with the given params to the Infrastructure Node.
 
     Override the basic ``add_port()`` to use :any:`InfraPort` objects.
 
+    Add a port with the given params to the :any:`Node`.
+
     :param id: optional id
     :type id: str or int
-    :param properties: supported properties of the port (one or more as list)
+    :param properties: supported properties of the port
     :type properties: str or iterable(str)
+    :param name: optional name
+    :type name: str
+    :param sap: inter-domain SAP identifier
+    :type sap: str
+    :param capability: optional capabilities
+    :type capability: str
+    :param technology: supported technologies
+    :type technology: str
+    :param delay: delay
+    :type delay: float
+    :param bandwidth: bandwidth
+    :type bandwidth: float
+    :param cost: cost
+    :type cost: str
+    :param controller: controller URL
+    :type controller: str
+    :param orchestrator: orchestrator URL
+    :type orchestrator: str
+    :param l2: l2 address
+    :param l2: str
+    :param l4: l4 fields
+    :type l4: str
+    :param metadata: metadata related to Node
+    :type metadata: dict
     :return: newly created and stored Port object
-    :rtype: :any:`Port`
+    :rtype: :any:`InfraPort`
     """
     port = InfraPort(self, properties=properties, id=id)
     self.ports.append(port)
@@ -1361,6 +1883,12 @@ class NodeInfra(Node):
       self.supported.remove(functional_type)
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     node = super(NodeInfra, self).persist()
     if self.domain is not None:
       node["domain"] = self.domain
@@ -1374,6 +1902,13 @@ class NodeInfra(Node):
     return node
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(NodeInfra, self).load(data=data)
     self.domain = data.get('domain', self.DEFAULT_DOMAIN)  # optional
     self.infra_type = data['type']
@@ -1384,10 +1919,22 @@ class NodeInfra(Node):
     return self
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "Infra(id: %s, name: %s, type: %s)" % (
       self.id, self.name, self.infra_type)
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return super(NodeInfra, self).__repr__()
 
 
@@ -1433,6 +1980,12 @@ class EdgeLink(Link):
     self.bandwidth = bandwidth  # optional
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     link = super(EdgeLink, self).persist()
     if self.delay is not None:
       link["delay"] = self.delay
@@ -1443,6 +1996,15 @@ class EdgeLink(Link):
     return link
 
   def load (self, data, container=None, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :param container: main container object
+    :type container: :any:`NFFGModel`
+    :return: None
+    """
     if container is None:
       raise RuntimeError(
         "Container reference is not given for edge endpoint lookup!")
@@ -1456,12 +2018,24 @@ class EdgeLink(Link):
     return self
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "EdgeLink(id: %s, src: %s[%s], dst: %s[%s], type: %s, backward: " \
            "%s, delay:%s, bandwidth: %s)" % (
              self.id, self.src.node.id, self.src.id, self.dst.node.id,
              self.dst.id, self.type, self.backward, self.delay, self.bandwidth)
 
   def __repr__ (self):
+    """
+    Return with specific string representation.
+
+    :return: specific representation
+    :rtype: str
+    """
     return "<|ID: %s, Type: %s, Back: %s, src: %s[%s], dst: %s[%s] --> %s|>" % (
       self.id, self.type, self.backward, self.src.node.id, self.src.id,
       self.dst.node.id, self.dst.id, super(Element, self).__repr__())
@@ -1502,6 +2076,12 @@ class EdgeSGLink(Link):
     self.bandwidth = bandwidth
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     link = super(EdgeSGLink, self).persist()
     if self.flowclass is not None:
       link["flowclass"] = self.flowclass
@@ -1514,6 +2094,15 @@ class EdgeSGLink(Link):
     return link
 
   def load (self, data, container=None, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :param container: main container object
+    :type container: :any:`NFFGModel`
+    :return: None
+    """
     if container is None:
       raise RuntimeError(
         "Container reference is not given for edge endpoint lookup!")
@@ -1529,6 +2118,12 @@ class EdgeSGLink(Link):
     return self
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "SGLink(id: %s, src: %s[%s], dst: %s[%s], tag: %s, delay:%s, " \
            "bandwidth: %s)" % (
              self.id, self.src.node.id, self.src.id, self.dst.node.id,
@@ -1574,6 +2169,12 @@ class EdgeReq(Link):
       self.sg_path = []
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     link = super(EdgeReq, self).persist()
     if self.delay is not None:
       link["delay"] = self.delay
@@ -1585,6 +2186,15 @@ class EdgeReq(Link):
     return link
 
   def load (self, data, container=None, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :param container: main container object
+    :type container: :any:`NFFGModel`
+    :return: None
+    """
     if container is None:
       raise RuntimeError(
         "Container reference is not given for edge endpoint lookup!")
@@ -1599,6 +2209,12 @@ class EdgeReq(Link):
     return self
 
   def __str__ (self):
+    """
+    Return with string representation.
+
+    :return: string representation
+    :rtype: str
+    """
     return "ReqLink(id: %s, src: %s[%s], dst: %s[%s], path: %s, delay:%s, " \
            "bandwidth: %s)" % (
              self.id, self.src.node.id, self.src.id, self.dst.node.id,
@@ -1624,21 +2240,26 @@ class NFFGModel(Element):
   """
   # Default version
   VERSION = "1.0"
+  """Default version"""
   # Namespace
   NAMESPACE = "http://csikor.tmit.bme.hu/netconf/unify/nffg"
+  """Namespace"""
   # prefix
   PREFIX = "nffg"
+  """prefix"""
   # Organization
   ORGANIZATION = "BME-TMIT"
+  """Organization"""
   # Description
   DESCRIPTION = "Network Function Forwarding Graph (NF-FG) data model"
+  """Description"""
   # Container type
   TYPE = "NFFG"
 
   def __init__ (self, id=None, name=None, metadata=None, mode=None, status=None,
                 version=None):
     """
-    Init
+    Init.
 
     :param id: optional NF-FG identifier (generated by default)
     :type id: str or int
@@ -1903,6 +2524,12 @@ class NFFGModel(Element):
         return True
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: dict
+    """
     nffg = OrderedDict(parameters=OrderedDict(id=self.id))
     if self.name is not None:
       nffg["parameters"]["name"] = self.name
@@ -1938,6 +2565,14 @@ class NFFGModel(Element):
 
     # Converter function to avoid unicode
     def unicode_to_str (input):
+      """
+      Converter function to avoid unicode.
+
+      :param input: data part
+      :type input: unicode
+      :return: converted data
+      :rtype: str
+      """
       if isinstance(input, dict):
         return OrderedDict(
           [(unicode_to_str(key), unicode_to_str(value)) for key, value in
