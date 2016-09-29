@@ -1398,6 +1398,16 @@ class NodeResource(Persistable):
     return "cpu: %s mem: %s storage: %s bandwidth: %s delay: %s" % (
       self.cpu, self.mem, self.storage, self.bandwidth, self.delay)
 
+  def is_empty (self):
+    """
+    Return False if no resource value are set or 0.
+
+    :return: resource values are set or not
+    :rtype: bool
+    """
+    return False if any(
+      (self.cpu, self.mem, self.storage, self.delay, self.bandwidth)) else True
+
 
 class Flowrule(Element):
   """
