@@ -2288,13 +2288,14 @@ class NFFGToolBox(object):
 
     # Copy remaining links which should be valid
     for u, v, link in new.network.edges_iter(data=True):
-      src_port = target.network.node[u].ports[link.src.id]
-      dst_port = target.network.node[v].ports[link.dst.id]
-      c_link = deepcopy(link)
-      c_link.src = src_port
-      c_link.dst = dst_port
-      target.add_link(src_port=src_port, dst_port=dst_port, link=c_link)
-      log.debug("Copy Link: %s" % c_link)
+      if not target.network.has_edge(u, v, key=link.id):
+        src_port = target.network.node[u].ports[link.src.id]
+        dst_port = target.network.node[v].ports[link.dst.id]
+        c_link = deepcopy(link)
+        c_link.src = src_port
+        c_link.dst = dst_port
+        target.add_link(src_port=src_port, dst_port=dst_port, link=c_link)
+        log.debug("Copy Link: %s" % c_link)
     return target
 
   @classmethod
