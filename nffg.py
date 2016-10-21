@@ -1011,15 +1011,14 @@ class NFFG(AbstractNFFG):
     # set availbandwidth to the maximal value
     for i, j, k, d in self.network.edges_iter(data=True, keys=True):
       if d.type == 'STATIC':
-        if not hasattr(self.network[i][j][k], 'availbandwidth'):
-          setattr(self.network[i][j][k], 'availbandwidth', d.bandwidth)
+        setattr(self.network[i][j][k], 'availbandwidth', d.bandwidth)
     # find all the flowrules with starting TAG and retrieve the paths, 
     # and subtract the reserved link and internal (inside Infras) bandwidth
     if mode == self.MODE_ADD:
       for d in self.infras:
         for p in d.ports:
           for fr in p.flowrules:
-            if fr.hop_id in sg_hops_to_be_ignored and fr.bandwidth is not None:
+            if fr.hop_id in not sg_hops_to_be_ignored and fr.bandwidth is not None:
               # If the parent SG of this flowrule is in both graphs and the 
               # SG hops both ends are also in both graphs
               d.availres['bandwidth'] -= fr.bandwidth
