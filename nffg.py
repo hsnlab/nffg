@@ -1018,7 +1018,7 @@ class NFFG(AbstractNFFG):
       for d in self.infras:
         for p in d.ports:
           for fr in p.flowrules:
-            if fr.hop_id in not sg_hops_to_be_ignored and fr.bandwidth is not None:
+            if fr.hop_id not in sg_hops_to_be_ignored and fr.bandwidth is not None:
               # If the parent SG of this flowrule is in both graphs and the 
               # SG hops both ends are also in both graphs
               d.availres['bandwidth'] -= fr.bandwidth
