@@ -19,6 +19,7 @@ import copy
 import itertools
 import logging
 import re
+import math
 from copy import deepcopy
 
 import networkx
@@ -2416,16 +2417,16 @@ class NFFGToolBox(object):
     else:
       edges_func = nffg.network.in_edges_iter
     for i, j, d in edges_func([port.node.id], data=True):
-      if d.type == 'STATIC':
+      if d.type == 'STATIC' or (accept_dyn and d.type == 'DYNAMIC'):
         if outbound and port.id == d.src.id:
           if link is not None:
             raise RuntimeError("InfraPort %s has more than one outbound "
-                               "STATIC links!")
+                               "links!"%port.id)
           link = d
         if not outbound and port.id == d.dst.id:
           if link is not None:
             raise RuntimeError("InfraPort %s has more than one inbound "
-                               "STATIC links!")
+                               "links!"%port.id)
           link = d
     return link
 
@@ -2637,7 +2638,7 @@ class NFFGToolBox(object):
     return converted
 
   @staticmethod
-  def extract_flowclass (splitted_matches):
+  def _extract_flowclass (splitted_matches):
     """
     Interprets the match field of a flowrule as everything is flowclass except
     "TAG=" and "in_port=" fields. Returns the string to be put into the 
@@ -2820,11 +2821,42 @@ class NFFGToolBox(object):
 
   @staticmethod
   def _get_flowrule_and_its_starting_port (infra, fr_id):
-    pass
+    """
+    Finds the Flowrule which belongs to the path of SGHop with ID 'fr_id'.
+    
+    :param infra: Infra object where we should look for the Flowrule
+    :type infra: :any:`NodeInfra`
+    :param fr_id: Flowrule/SGHop ID to look for
+    :type fr_id: int
+    :return: Flowrule and its containing InfraPort
+    :rtype: 2-tuple
+    """
+    for p in infra.ports:
+      for fr in p.flowrules:
+        if fr.id == fr_id:
+          return fr, p
+    else:
+      raise RuntimeError("Couldn't find Flowrule for SGHop %s in Infra %s!"
+                         %(fr_id, infra.id))
   
   @staticmethod
   def _get_output_port_of_flowrule (infra, fr):
-    pass
+    """
+    Find the port object where this Flowrule sends the traffic out.
+
+    :param infra: Infra object where we should look for the InfraPort.
+    :type infra: :any:`NodeInfra`
+    :return: The output infra port.
+    :rtype: :any:`InfraPort`
+    """
+    for action in fr.action.split(";"):
+      comm, arg = action.split("=", 1)
+      if comm == 'output':
+        arg = NFFGToolBox.try_to_convert(arg)
+        return infra.ports[arg]
+    else:
+      raise RuntimeError("Couldn't find output InfraPort object for Flowrule %s"
+                         " in Infra%s!"%(fr.id, infra.id))
 
   @staticmethod
   def get_all_sghop_info (nffg, return_paths = False):
@@ -2855,7 +2887,8 @@ class NFFGToolBox(object):
           if fr.id not in sg_map:
             # The path is unordered!! 
             path_of_shop = []
-            sg_map[fr.id] = [None, None, fr.flowclass, fr.bandwidth, fr.delay]
+            flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
+            sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay]
             # We have to find the BEGINNING of this flowrule sequence.
             inbound_link = NFFGToolBox._find_infra_link(nffg, p, outbound=False, 
                                                         accept_dyn=True)
@@ -2866,8 +2899,11 @@ class NFFGToolBox(object):
               # The link is STATIC, and its src is not SAP so it is an Infra.
               prev_fr, prev_p = NFFGToolBox._get_flowrule_and_its_starting_port(\
                                             inbound_link.src.node, fr.id)
-              if sg_map[fr.id][2] != prev_fr.flowclass or sg_map[fr.id][3] != \
-                 prev_fr.bandwidth or sg_map[fr.id][4] != prev_fr.delay:
+              prev_flowclass = NFFGToolBox._extract_flowclass(\
+                                           prev_fr.match.split(";"))
+              if sg_map[fr.id][2] != prev_flowclass or math.fabs(sg_map[fr.id][3]\
+                 - prev_fr.bandwidth)>1e-8 or math.fabs(sg_map[fr.id][4] - \
+                                                        prev_fr.delay)>1e-8:
                 raise RuntimeError("Not all data of a Flowrule equal to the "
                                    "other Flowrules of the sequence for the "
                                    "SGHop %s!"%fr.id)
@@ -2888,11 +2924,14 @@ class NFFGToolBox(object):
               # The link is STATIC and its dst is not a SAP so it is an Infra.
               next_fr, _ = NFFGToolBox._get_flowrule_and_its_starting_port(\
                                        outbound_link.dst.node, fr.id)
+              next_flowclass = NFFGToolBox._extract_flowclass(\
+                                           next_fr.match.split(";"))
               # '_' is 'outbound_link.dst'
               next_output_port = NFFGToolBox._get_output_port_of_flowrule(\
                                              outbound_link.dst.node, next_fr)
-              if sg_map[fr.id][2] != next_fr.flowclass or sg_map[fr.id][3] != \
-                 next_fr.bandwidth or sg_map[fr.id][4] != next_fr.delay:
+              if sg_map[fr.id][2] != next_flowclass or math.fabs(sg_map[fr.id][3]\
+                 - next_fr.bandwidth)>1e-8 or math.fabs(sg_map[fr.id][4] - \
+                                                        next_fr.delay)>1e-8:
                 raise RuntimeError("Not all data of a Flowrule equal to the "
                                    "other Flowrules of the sequence for the "
                                    "SGHop %s!"%fr.id)
@@ -2908,9 +2947,29 @@ class NFFGToolBox(object):
 
     return sg_map
 
-  def recreate_all_sghops (nffg, sghop_info):
-    pass
+  def recreate_all_sghops (nffg):
+    """
+    Extracts the SGHop information from the input NFFG, and creates the SGHop 
+    objects in the NFFG.
 
+    :param nffg: the NFFG to look for SGHop info and to modify
+    :type nffg: :any:`NFFG`
+    :return: the modified NFFG
+    :rtype: :any:`NFFG`
+    """
+    sg_map = NFFGToolBox.get_all_sghop_info(nffg)
+    for sg_hop_id, data in sg_map.iteritems():
+      src, dst, flowclass, bandwidth, delay = data
+      if not nffg.network.has_edge(src.node.id, dst.node.id, key=sg_hop_id):
+        nffg.add_sglink(src, dst, id=sg_hop_id, flowclass=flowclass, 
+                        bandwidth=bandwidth, delay=delay)
+      else:
+        sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
+        if sg_hop.flowclass != flowclass or math.fabs(sg_hop.delay-delay)>1e-8 or\
+           math.fabs(sg_hop.bandwidth-bandwidth)>1e-8:
+          raise RuntimeError("SGHop %s is already in NFFG, but with different "
+                             "data!"%sg_hop_id)
+    return nffg
 
 def generate_test_NFFG ():
   """
