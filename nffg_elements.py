@@ -1414,8 +1414,7 @@ class Flowrule(Element):
   Class for storing a flowrule.
   """
 
-  def __init__ (self, id=None, match="", action="", bandwidth=None, delay=None,
-                hop_id=None):
+  def __init__ (self, id=None, match="", action="", bandwidth=None, delay=None):
     """
     Init.
 
@@ -1423,8 +1422,6 @@ class Flowrule(Element):
     :type match: str
     :param action: forwarding action
     :type action: str
-    :param hop_id: related SG hop
-    :type hop_id: str
     :param bandwidth: bandwidth
     :type bandwidth: float
     :param delay: delay
@@ -1434,7 +1431,6 @@ class Flowrule(Element):
     super(Flowrule, self).__init__(id=id, type="FLOWRULE")
     self.match = match  # mandatory
     self.action = action  # mandatory
-    self.hop_id = hop_id  # mandatory
     self.bandwidth = bandwidth
     self.delay = delay
 
@@ -1450,8 +1446,6 @@ class Flowrule(Element):
       flowrule['match'] = self.match
     if self.action:
       flowrule['action'] = self.action
-    if self.hop_id:
-      flowrule['hop_id'] = self.hop_id
     if self.bandwidth:
       flowrule['bandwidth'] = self.bandwidth
     if self.delay:
@@ -1469,7 +1463,6 @@ class Flowrule(Element):
     super(Flowrule, self).load(data=data)
     self.match = data.get('match')
     self.action = data.get('action')
-    self.hop_id = data.get('hop_id')
     self.bandwidth = float(data['bandwidth']) if 'bandwidth' in data else None
     self.delay = float(data['delay']) if 'delay' in data else None
     return self
@@ -1481,9 +1474,9 @@ class Flowrule(Element):
     :return: specific representation
     :rtype: str
     """
-    return "Flowrule object:\nmatch: %s \naction: %s \nhop: %s \nbandwidth: " \
+    return "Flowrule object:\nmatch: %s \naction: %s \nbandwidth: " \
            "%s \ndelay: %s" % (
-             self.match, self.action, self.hop_id, self.bandwidth, self.delay)
+             self.match, self.action, self.bandwidth, self.delay)
 
   def __str__ (self):
     """
@@ -1492,9 +1485,9 @@ class Flowrule(Element):
     :return: string representation
     :rtype: str
     """
-    return "%s(match: %s, action: %s, hop: %s, bandwidth: %s, delay: %s)" % (
-      self.__class__.__name__, self.match, self.action, self.hop_id,
-      self.bandwidth, self.delay)
+    return "%s(match: %s, action: %s, bandwidth: %s, delay: %s)" % (
+      self.__class__.__name__, self.match, self.action, self.bandwidth, 
+      self.delay)
 
 
 class InfraPort(Port):
@@ -1520,8 +1513,7 @@ class InfraPort(Port):
                                     metadata=metadata)
     self.flowrules = []
 
-  def add_flowrule (self, match, action, bandwidth=None, delay=None,
-                    hop_id=None, id=None):
+  def add_flowrule (self, match, action, bandwidth=None, delay=None, id=None):
     """
     Add a flowrule with the given params to the port of an Infrastructure Node.
 
@@ -1529,8 +1521,6 @@ class InfraPort(Port):
     :type match: str
     :param action: forwarding action
     :type action: str
-    :param hop_id: related SG hop
-    :type hop_id: str
     :param bandwidth: bandwidth
     :type bandwidth: float
     :param delay: delay
@@ -1541,7 +1531,7 @@ class InfraPort(Port):
     :rtype: :any:`Flowrule`
     """
     flowrule = Flowrule(id=id, match=match, action=action, bandwidth=bandwidth,
-                        delay=delay, hop_id=hop_id)
+                        delay=delay)
     self.flowrules.append(flowrule)
     return flowrule
 
@@ -1612,8 +1602,7 @@ class InfraPort(Port):
         action=flowrule.get('action'),
         delay=float(flowrule['delay']) if 'delay' in flowrule else None,
         bandwidth=float(
-          flowrule['bandwidth']) if 'bandwidth' in flowrule else None,
-        hop_id=flowrule.get('hop_id'))
+          flowrule['bandwidth']) if 'bandwidth' in flowrule else None)
 
 
 ################################################################################
