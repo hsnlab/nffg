@@ -1013,39 +1013,28 @@ class NFFG(AbstractNFFG):
     for i, j, k, d in self.network.edges_iter(data=True, keys=True):
       if d.type == 'STATIC':
         setattr(self.network[i][j][k], 'availbandwidth', d.bandwidth)
-    # find all the flowrules with starting TAG and retrieve the paths, 
-    # and subtract the reserved link and internal (inside Infras) bandwidth
+    # subtract the reserved link and internal (inside Infras) bandwidth
     if mode == self.MODE_ADD:
       for d in self.infras:
         for p in d.ports:
           for fr in p.flowrules:
-            if fr.hop_id not in sg_hops_to_be_ignored and fr.bandwidth is not None:
-              # If the parent SG of this flowrule is in both graphs and the 
-              # SG hops both ends are also in both graphs
+            if fr.id not in sg_hops_to_be_ignored and fr.bandwidth is not None:
+              # Flowrules are cummulatively subtracted from the switching 
+              # capacity of the node.
               d.availres['bandwidth'] -= fr.bandwidth
-          for TAG in NFFGToolBox.get_TAGs_of_starting_flows(p,
-                                                            sg_hops_to_be_ignored):
-            path_of_TAG, flow_bw = NFFGToolBox.retrieve_mapped_path(TAG, self,
-                                                                    p)
-            # collocation flowrules dont have TAGs so their empty lists are not 
-            # returned by get_TAGs_of_starting_flows, but this case
-            # is also handled by the Flowrule.bandwidth summerizing 'for loop'
-            if flow_bw is not None:
-              for link in path_of_TAG:
-                link.availbandwidth -= flow_bw
-                if link.availbandwidth < 0:
-                  raise RuntimeError("(BadInputException) "
-                                     "The bandwidth usage implied by the sum "
-                                     "of "
-                                     "flowrule "
-                                     "bandwidths should determine the occupied "
-                                     "capacity on links. "
-                                     "The bandwidth capacity on link %s, %s, "
-                                     "%s got below "
-                                     "zero!" % (
-                                       link.src.node.id,
-                                       link.dst.node.id,
-                                       link.id))
+              if d.availres['bandwidth'] < 0:
+                raise RuntimeError("The node bandwidth of %s got below zero "
+                                   "during available resource calculation!"%d.id)
+      # Get all the mapped paths of all SGHops from the NFFG
+      sg_map = NFFGToolBox.get_all_sghop_info(self, return_paths=True)
+      for sg_hop_id, data in sg_map.iteritems():
+        src, dst, flowclass, bandwidth, delay, path = data
+        if bandwidth is not None:
+          for link in path:
+            link.availbandwidth -= bandwidth
+            if link.availbandwidth < 0:
+              raise RuntimeError("The link bandwidth of %s got below zero during"
+                                 "available resource calculation!"%link.id)
 
   def calculate_available_node_res (self, vnfs_to_be_left_in_place={},
                                     mode=MODE_ADD):
@@ -1094,8 +1083,9 @@ class NFFG(AbstractNFFG):
 
   def del_flowrules_of_SGHop (self, hop_id_to_del):
     """
-    Deletes all flowrules, which belong to a given SGHop ID. Uses the hop_id 
-    field of the Flowrule class.
+    Deletes all flowrules, which belong to a given SGHop ID. 
+    Compares based on Flowrule.ID and SGHop.ID they should be identical only 
+    for the corresponding Flowrules.
 
     :param hop_id_to_del: collection of flowrule ids need to be deleted
     :type hop_id_to_del: list
@@ -1104,7 +1094,7 @@ class NFFG(AbstractNFFG):
     for n in self.infras:
       for p in n.ports:
         for fr in p.flowrules:
-          if fr.hop_id == hop_id_to_del:
+          if fr.id == hop_id_to_del:
             p.del_flowrule(id=fr.id)
 
 
@@ -2868,10 +2858,10 @@ class NFFGToolBox(object):
     NFFG object and the output of this function.
     It is based exclusively on flowrules, flowrule ID-s are equal to the 
     corresponding SGHop's ID.
-    if set, the 6th element in the dict values is always an unordered list of 
-    the STATIC link references, which are used by the flowrule sequence.
-    Doesn't change the input NFFG, only returns the SGHop values, SGHops are 
-    not added.
+    If return_paths is set, the 6th element in the dict values is always an 
+    unordered list of the STATIC link references, which are used by the flowrule
+    sequence. Doesn't change the input NFFG, only returns the SGHop values, 
+    SGHops are not added.
 
     :param nffg: the processed NFFG object
     :type nffg: :any:`NFFG`
