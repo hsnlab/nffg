@@ -14,7 +14,9 @@ def _calculate_diffs (old_path, new_path):
   """
   print "Calculate the difference NFFGs..."
   old = NFFG.parse_from_file(old_path)
+  NFFGToolBox.recreate_all_sghops(nffg=old)
   new = NFFG.parse_from_file(new_path)
+  NFFGToolBox.recreate_all_sghops(nffg=new)
   add_nffg, del_nffg = NFFGToolBox.generate_difference_of_nffgs(old=old,
                                                                 new=new)
   print "\nADD NFFG:"
