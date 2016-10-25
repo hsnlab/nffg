@@ -1526,9 +1526,14 @@ class NFFGToolBox(object):
     return splitted_parts
 
   @classmethod
-  def recreate_match_TAGs (cls, nffg, log=logging.getLogger("TAG")):
+  def recreate_missing_match_TAGs (cls, nffg, log=logging.getLogger("TAG")):
     """
     Recreate TAGs for flowrules forwarding traffic from a different domain.
+
+    In case there is a hop in the service request mapped as a collocated link
+    it might break down to multiple links/flowrules in a lower layer where the
+    links are placed into different domains therefore the match/action field are
+    created without tags because collocated links do not use tags by default.
 
     :param nffg: mapped NFFG object
     :type nffg: NFFG
@@ -1561,15 +1566,15 @@ class NFFGToolBox(object):
               except ValueError:
                 continue
               # Found a TAG with the vlan
-              if vlan == str(flowrule.hop_id):
+              if vlan == str(flowrule.id):
                 found = True
                 break
             if found:
               # If found the appropriate TAG -> skip adding
               continue
-          log.debug("TAG with vlan: %s is not found in %s!" % (flowrule.hop_id,
+          log.debug("TAG with vlan: %s is not found in %s!" % (flowrule.id,
                                                                flowrule))
-          match_vlan = ";TAG=<None>|<None>|%s" % flowrule.hop_id
+          match_vlan = ";TAG=<None>|<None>|%s" % flowrule.id
           flowrule.match += match_vlan
           log.debug("Manually extended match field: %s" % flowrule.match)
 
