@@ -18,8 +18,9 @@ as building, parsing, processing NF-FG, helper functions, etc.
 import copy
 import itertools
 import logging
-import re
 import math
+import pprint
+import re
 from copy import deepcopy
 
 import networkx
@@ -1024,7 +1025,8 @@ class NFFG(AbstractNFFG):
               d.availres['bandwidth'] -= fr.bandwidth
               if d.availres['bandwidth'] < 0:
                 raise RuntimeError("The node bandwidth of %s got below zero "
-                                   "during available resource calculation!"%d.id)
+                                   "during available resource calculation!" %
+                                   d.id)
       # Get all the mapped paths of all SGHops from the NFFG
       sg_map = NFFGToolBox.get_all_sghop_info(self, return_paths=True)
       for sg_hop_id, data in sg_map.iteritems():
@@ -1033,8 +1035,9 @@ class NFFG(AbstractNFFG):
           for link in path:
             link.availbandwidth -= bandwidth
             if link.availbandwidth < 0:
-              raise RuntimeError("The link bandwidth of %s got below zero during"
-                                 "available resource calculation!"%link.id)
+              raise RuntimeError(
+                "The link bandwidth of %s got below zero during"
+                "available resource calculation!" % link.id)
 
   def calculate_available_node_res (self, vnfs_to_be_left_in_place={},
                                     mode=MODE_ADD):
@@ -1728,13 +1731,16 @@ class NFFGToolBox(object):
   ##############################################################################
 
   @staticmethod
-  def generate_SBB_representation (nffg, log=logging.getLogger("SBB")):
+  def generate_SBB_representation (nffg, add_sg_hops=False,
+                                   log=logging.getLogger("SBB")):
     """
     Generate the trivial virtual topology a.k.a one BisBis or Single BisBis
     representation with calculated resources and transferred NF and SAP nodes.
 
     :param nffg: global resource
     :type nffg: :any:`NFFG`
+    :param add_sg_hops: recreate SG hop links also (default: False)
+    :type add_sg_hops: bool
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: single Bisbis representation
@@ -1840,19 +1846,18 @@ class NFFGToolBox(object):
         log.debug("Added connection: %s" % link1)
         log.debug("Added connection: %s" % link2)
     # Recreate flowrules based on NBalazs functions
-    sg_hop_info = NFFGToolBox.retrieve_all_SGHops(nffg=nffg)
-    import pprint
+    sg_hop_info = NFFGToolBox.get_all_sghop_info(nffg=nffg)
     log.debug("Detected SG hop info:\n%s" % pprint.pformat(sg_hop_info))
     log.debug("Recreate flowrules...")
-    for key, value in sg_hop_info.iteritems():
-      sg_src_node = key[0]
+    for sg_id, value in sg_hop_info.iteritems():
+      sg_src_node = value[0].node.id
       sg_src_port = value[0].id
-      sg_dst_node = key[1]
+      sg_dst_node = value[1].node.id
       sg_dst_port = value[1].id
-      fr_bw = value[3]
       flowclass = value[2]
+      fr_bw = value[3]
       fr_delay = value[4]
-      fr_hop = key[2]
+      fr_hop = sg_id
       sbb_src_port = [l.dst for u, v, l in
                       sbb.network.out_edges_iter(sg_src_node, data=True) if
                       l.src.id == sg_src_port and l.src.node.id == sg_src_node]
@@ -1890,17 +1895,21 @@ class NFFGToolBox(object):
                                      bandwidth=fr_bw, delay=fr_delay,
                                      hop_id=fr_hop, id=fr_hop, )
       log.debug("Added flowrule: %s" % fr)
-    log.debug("Recreate SG hops...")
-    for key, value in sg_hop_info.iteritems():
-      hop_id = key[2]
-      sg_src_port = value[0]
-      sg_dst_port = value[1]
-      hop_fc = value[2]
-      hop_bw = value[3]
-      hop_delay = value[4]
-      sg = sbb.add_sglink(src_port=sg_src_port, dst_port=sg_dst_port, id=hop_id,
-                          flowclass=hop_fc, delay=hop_delay, bandwidth=hop_bw)
-      log.debug("Added SG hop: %s" % sg)
+    if add_sg_hops:
+      log.debug("Recreate SG hops...")
+      for sg_id, value in sg_hop_info.iteritems():
+        hop_id = sg_id
+        sg_src_port = value[0]
+        sg_dst_port = value[1]
+        hop_fc = value[2]
+        hop_bw = value[3]
+        hop_delay = value[4]
+        sg = sbb.add_sglink(src_port=sg_src_port, dst_port=sg_dst_port,
+                            id=hop_id, flowclass=hop_fc, delay=hop_delay,
+                            bandwidth=hop_bw)
+        log.debug("Added SG hop: %s" % sg)
+    else:
+      log.debug("Skip SG hop recreation for the SingleBiSBiS!")
     log.debug("SingleBiSBiS generation has been finished!")
     # Return with Single BiSBiS infra
     return sbb
@@ -2380,12 +2389,12 @@ class NFFGToolBox(object):
         if outbound and port.id == d.src.id:
           if link is not None:
             raise RuntimeError("InfraPort %s has more than one outbound "
-                               "links!"%port.id)
+                               "links!" % port.id)
           link = d
         if not outbound and port.id == d.dst.id:
           if link is not None:
             raise RuntimeError("InfraPort %s has more than one inbound "
-                               "links!"%port.id)
+                               "links!" % port.id)
           link = d
     return link
 
@@ -2449,8 +2458,8 @@ class NFFGToolBox(object):
           return fr, p
     else:
       raise RuntimeError("Couldn't find Flowrule for SGHop %s in Infra %s!"
-                         %(fr_id, infra.id))
-  
+                         % (fr_id, infra.id))
+
   @staticmethod
   def _get_output_port_of_flowrule (infra, fr):
     """
@@ -2468,8 +2477,8 @@ class NFFGToolBox(object):
         return infra.ports[arg]
     else:
       raise RuntimeError("Couldn't find output InfraPort object for Flowrule %s"
-                         " in Infra%s!"%(fr.id, infra.id))
- 
+                         " in Infra%s!" % (fr.id, infra.id))
+
   @staticmethod
   def _check_flow_consistencity (sg_map, fr_sg):
     """
@@ -2490,24 +2499,24 @@ class NFFGToolBox(object):
       # If not both of them are None
       consistent = False
     elif (sg_map[fr_sg.id][3] is not None) and (fr_sg.bandwidth is not None):
-      if consistent and math.fabs(sg_map[fr_sg.id][3] - fr_sg.bandwidth)>1e-8:
-        consistent = False 
+      if consistent and math.fabs(sg_map[fr_sg.id][3] - fr_sg.bandwidth) > 1e-8:
+        consistent = False
     if (sg_map[fr_sg.id][4] is None) != (fr_sg.delay is None):
       # If not both of them are None
       consistent = False
     elif (sg_map[fr_sg.id][4] is not None) and (fr_sg.delay is not None):
-      if math.fabs(sg_map[fr_sg.id][4] - fr_sg.delay)>1e-8:
+      if math.fabs(sg_map[fr_sg.id][4] - fr_sg.delay) > 1e-8:
         consistent = False
     if not consistent:
       raise RuntimeError("Not all data of a Flowrule equal to the other "
                          "Flowrules of the sequence for the SGHop %s! Or the"
                          " SGHop to be added differs in data from the existing"
-                         " SGHop!"%fr_sg.id)
+                         " SGHop!" % fr_sg.id)
 
   @staticmethod
-  def get_all_sghop_info (nffg, return_paths = False):
+  def get_all_sghop_info (nffg, return_paths=False):
     """
-    Returns a dictionary keyed by 'reqlinkid' tuples, data is [PortObjsrc, 
+    Returns a dictionary keyed by sghopid, data is [PortObjsrc,
     PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay] list of port
     objects. Source and destination VNF-s can be retreived from port references 
     (port.node.id). The function 'recreate_all_sghops' should receive this exact
@@ -2536,39 +2545,44 @@ class NFFGToolBox(object):
             flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
             sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay]
             # We have to find the BEGINNING of this flowrule sequence.
-            inbound_link = NFFGToolBox._find_infra_link(nffg, p, outbound=False, 
+            inbound_link = NFFGToolBox._find_infra_link(nffg, p, outbound=False,
                                                         accept_dyn=True)
             while inbound_link.type != 'DYNAMIC':
               path_of_shop.append(inbound_link)
               if inbound_link.src.node.type == 'SAP':
                 break
               # The link is STATIC, and its src is not SAP so it is an Infra.
-              prev_fr, prev_p = NFFGToolBox._get_flowrule_and_its_starting_port(\
-                                            inbound_link.src.node, fr.id)
+              prev_fr, prev_p = \
+                NFFGToolBox._get_flowrule_and_its_starting_port( \
+                  inbound_link.src.node, fr.id)
               NFFGToolBox._check_flow_consistencity(sg_map, prev_fr)
-              inbound_link = NFFGToolBox._find_infra_link(nffg, prev_p, 
-                                         outbound=False, accept_dyn=True)
-            # 'inbound_link' is DYNAMIC here or it is STATIC and starts from a SAP,
+              inbound_link = NFFGToolBox._find_infra_link(nffg, prev_p,
+                                                          outbound=False,
+                                                          accept_dyn=True)
+            # 'inbound_link' is DYNAMIC here or it is STATIC and starts from
+            # a SAP,
             # so the sequence starts here
             sg_map[fr.id][0] = inbound_link.src
 
             # We have to find the ENDING of this flowrule sequence.
             output_port = NFFGToolBox._get_output_port_of_flowrule(i, fr)
-            outbound_link = NFFGToolBox._find_infra_link(nffg, output_port, 
-                                        outbound=True, accept_dyn=True)
+            outbound_link = NFFGToolBox._find_infra_link(nffg, output_port,
+                                                         outbound=True,
+                                                         accept_dyn=True)
             while outbound_link.type != 'DYNAMIC':
               path_of_shop.append(outbound_link)
               if outbound_link.dst.node.type == 'SAP':
                 break
               # The link is STATIC and its dst is not a SAP so it is an Infra.
-              next_fr, _ = NFFGToolBox._get_flowrule_and_its_starting_port(\
-                                       outbound_link.dst.node, fr.id)
+              next_fr, _ = NFFGToolBox._get_flowrule_and_its_starting_port( \
+                outbound_link.dst.node, fr.id)
               # '_' is 'outbound_link.dst'
-              next_output_port = NFFGToolBox._get_output_port_of_flowrule(\
-                                             outbound_link.dst.node, next_fr)
+              next_output_port = NFFGToolBox._get_output_port_of_flowrule( \
+                outbound_link.dst.node, next_fr)
               NFFGToolBox._check_flow_consistencity(sg_map, next_fr)
-              outbound_link = NFFGToolBox._find_infra_link(nffg, 
-                                          next_output_port, outbound=True, 
+              outbound_link = NFFGToolBox._find_infra_link(nffg,
+                                                           next_output_port,
+                                                           outbound=True,
                                                            accept_dyn=True)
             # the 'outbound_link' is DYNAMIC here or finishes in a SAP, so the 
             # flowrule sequence finished here.
@@ -2594,12 +2608,13 @@ class NFFGToolBox(object):
     for sg_hop_id, data in sg_map.iteritems():
       src, dst, flowclass, bandwidth, delay = data
       if not nffg.network.has_edge(src.node.id, dst.node.id, key=sg_hop_id):
-        nffg.add_sglink(src, dst, id=sg_hop_id, flowclass=flowclass, 
+        nffg.add_sglink(src, dst, id=sg_hop_id, flowclass=flowclass,
                         bandwidth=bandwidth, delay=delay)
       else:
         sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
         NFFGToolBox._check_flow_consistencity(sg_map, sg_hop)
     return nffg
+
 
 def generate_test_NFFG ():
   """
