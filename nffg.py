@@ -1895,22 +1895,25 @@ class NFFGToolBox(object):
         fr_match = "in_port=%s;flowclass=%s" % (sbb_src_port.id, flowclass)
       else:
         fr_match = "in_port=%s" % sbb_src_port.id
-      fr = sbb_src_port.add_flowrule(match=fr_match,
+      fr = sbb_src_port.add_flowrule(id=fr_hop,
+                                     match=fr_match,
                                      action="output=%s" % sbb_dst_port.id,
-                                     bandwidth=fr_bw, delay=fr_delay,
-                                     hop_id=fr_hop, id=fr_hop, )
+                                     bandwidth=fr_bw,
+                                     delay=fr_delay, )
       log.debug("Added flowrule: %s" % fr)
     if add_sg_hops:
       log.debug("Recreate SG hops...")
       for sg_id, value in sg_hop_info.iteritems():
-        hop_id = sg_id
         sg_src_port = value[0]
         sg_dst_port = value[1]
         hop_fc = value[2]
         hop_bw = value[3]
         hop_delay = value[4]
-        sg = sbb.add_sglink(src_port=sg_src_port, dst_port=sg_dst_port,
-                            id=hop_id, flowclass=hop_fc, delay=hop_delay,
+        sg = sbb.add_sglink(id=sg_id,
+                            src_port=sg_src_port,
+                            dst_port=sg_dst_port,
+                            flowclass=hop_fc,
+                            delay=hop_delay,
                             bandwidth=hop_bw)
         log.debug("Added SG hop: %s" % sg)
     else:
@@ -2133,7 +2136,7 @@ class NFFGToolBox(object):
           for ufr in updated[infra_id].ports[port.id].flowrules:
             # Theoretically in a port there is only one flowrule with a given
             #  hop_id --> if the hop_ids are the same it must be the same fr
-            if fr.hop_id == ufr.hop_id:
+            if fr.id == ufr.id:
               fr.status = ufr.status
               changed = True
               break
@@ -2666,7 +2669,7 @@ def generate_test_NFFG ():
   p_infra2 = infra.add_port(id="infra1|nf1|1")
   p_infra1.add_flowrule(match="in_port=1;TAG=sap1|nf1|1",
                         action="output=infra1|nf1|1;UNTAG", delay=1,
-                        bandwidth=2, hop_id="sg1")
+                        bandwidth=2)
   nffg.add_undirected_link(port1=p_sap, port2=p_infra1, delay=1, bandwidth=2)
   nffg.add_link(src_port=p_infra2, dst_port=p_nf, id="l1", dynamic=True,
                 backward=False, delay=1, bandwidth=2)
