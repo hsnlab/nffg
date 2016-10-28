@@ -1302,43 +1302,43 @@ class NFFGToolBox(object):
         log.debug("Found inter-domain port: %s" % domain_port_nffg)
 
         # If the two resource value does not match
-        if domain_port_dov.delay != domain_port_nffg.delay:
-          if domain_port_dov.delay is None:
+        if sap_port_dov.delay != sap_port_nffg.delay:
+          if sap_port_dov.delay is None:
             # If first is None the other can not be None
-            s_delay = domain_port_nffg.delay
-          elif domain_port_nffg.delay is None:
+            s_delay = sap_port_nffg.delay
+          elif sap_port_nffg.delay is None:
             # If second is None the other can not be None
-            s_delay = domain_port_dov.delay
+            s_delay = sap_port_dov.delay
           else:
             # Both values are valid, but different
-            s_delay = max(domain_port_dov.delay, domain_port_nffg.delay)
+            s_delay = max(sap_port_dov.delay, sap_port_nffg.delay)
             log.warning(
               "Inter-domain delay values (%s, %s) are set but do not match!"
-              " Use max: %s" % (domain_port_dov.delay, domain_port_nffg.delay,
+              " Use max: %s" % (sap_port_dov.delay, sap_port_nffg.delay,
                                 s_delay))
         else:
           # Both value match: ether valid values or Nones --> choose first value
-          s_delay = domain_port_dov.delay
+          s_delay = sap_port_dov.delay
 
         # If the two resource value does not match
-        if domain_port_dov.bandwidth != domain_port_nffg.bandwidth:
-          if domain_port_dov.bandwidth is None:
+        if sap_port_dov.bandwidth != sap_port_nffg.bandwidth:
+          if sap_port_dov.bandwidth is None:
             # If first is None the other can not be None
-            s_bandwidth = domain_port_nffg.bandwidth
-          elif domain_port_nffg.bandwidth is None:
+            s_bandwidth = sap_port_nffg.bandwidth
+          elif sap_port_nffg.bandwidth is None:
             # If second is None the other can not be None
-            s_bandwidth = domain_port_dov.bandwidth
+            s_bandwidth = sap_port_dov.bandwidth
           else:
             # Both values are valid, but different
-            s_bandwidth = min(domain_port_dov.bandwidth,
-                              domain_port_nffg.bandwidth)
+            s_bandwidth = min(sap_port_dov.bandwidth,
+                              sap_port_nffg.bandwidth)
             log.warning(
               "Inter-domain bandwidth values (%s, %s) are set but do not match!"
-              " Use min: %s" % (domain_port_dov.bandwidth,
-                                domain_port_nffg.bandwidth, s_bandwidth))
+              " Use min: %s" % (sap_port_dov.bandwidth,
+                                sap_port_nffg.bandwidth, s_bandwidth))
         else:
           # Both value match: ether valid values or Nones --> choose first value
-          s_bandwidth = domain_port_dov.bandwidth
+          s_bandwidth = sap_port_dov.bandwidth
 
         log.debug("Detected inter-domain resource values: delay: %s, "
                   "bandwidth: %s" % (s_delay, s_bandwidth))
@@ -2309,9 +2309,9 @@ class NFFGToolBox(object):
   def subtract_nffg (cls, minuend, subtrahend):
     """
     Deletes every (all types of) node from minuend which have higher degree in
-    subtrahend. And removes every (all types of) edge from minuend which are 
+    subtrahend. And removes every (all types of) edge from minuend which are
     present in subtrahend. Changes minuend, but doesn't change subtrahend.
-    NOTE: a node cannot be decreased to degree 0, because then it will be 
+    NOTE: a node cannot be decreased to degree 0, because then it will be
     removed.
 
     :param minuend: minuend NFFG object
@@ -2342,7 +2342,7 @@ class NFFGToolBox(object):
     Creates two NFFG objects which can be used in NFFG.MODE_ADD and
     NFFG.MODE_DEL
     operation modes of the mapping algorithm. Doesn't modify input objects.
-    
+
     :param old: old NFFG object
     :type old: :any:`NFFG`
     :param new: NFFG object of the new config
@@ -2427,8 +2427,8 @@ class NFFGToolBox(object):
   def _extract_flowclass (splitted_matches):
     """
     Interprets the match field of a flowrule as everything is flowclass except
-    "TAG=" and "in_port=" fields. Returns the string to be put into the 
-    flowclass field. Hopefully the order of the match segments are kept or 
+    "TAG=" and "in_port=" fields. Returns the string to be put into the
+    flowclass field. Hopefully the order of the match segments are kept or
     irrelevant.
 
     :param splitted_matches: elements of the match field
@@ -2452,7 +2452,7 @@ class NFFGToolBox(object):
   def _get_flowrule_and_its_starting_port (infra, fr_id):
     """
     Finds the Flowrule which belongs to the path of SGHop with ID 'fr_id'.
-    
+
     :param infra: Infra object where we should look for the Flowrule
     :type infra: :any:`NodeInfra`
     :param fr_id: Flowrule/SGHop ID to look for
@@ -2490,8 +2490,8 @@ class NFFGToolBox(object):
   @staticmethod
   def _check_flow_consistencity (sg_map, fr_sg):
     """
-    Checks whether there is an inconsistencity with Flowrule or SGHop 'fr_sg' 
-    and the other flowrules which are part of the SGHop's sequence OR SGHop 
+    Checks whether there is an inconsistencity with Flowrule or SGHop 'fr_sg'
+    and the other flowrules which are part of the SGHop's sequence OR SGHop
     which is in sg_map. Throws runtime exception if error found.
     Uses only the common fields of Flowrules and SGHops.
     'flowclass' needs to be extracted if 'fr_sg' is not an SGHop.
@@ -2526,14 +2526,14 @@ class NFFGToolBox(object):
     """
     Returns a dictionary keyed by sghopid, data is [PortObjsrc,
     PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay] list of port
-    objects. Source and destination VNF-s can be retreived from port references 
+    objects. Source and destination VNF-s can be retreived from port references
     (port.node.id). The function 'recreate_all_sghops' should receive this exact
     NFFG object and the output of this function.
-    It is based exclusively on flowrules, flowrule ID-s are equal to the 
+    It is based exclusively on flowrules, flowrule ID-s are equal to the
     corresponding SGHop's ID.
-    If return_paths is set, the 6th element in the dict values is always an 
+    If return_paths is set, the 6th element in the dict values is always an
     unordered list of the STATIC link references, which are used by the flowrule
-    sequence. Doesn't change the input NFFG, only returns the SGHop values, 
+    sequence. Doesn't change the input NFFG, only returns the SGHop values,
     SGHops are not added.
 
     :param nffg: the processed NFFG object
@@ -2548,7 +2548,7 @@ class NFFGToolBox(object):
       for p in i.ports:
         for fr in p.flowrules:
           if fr.id not in sg_map:
-            # The path is unordered!! 
+            # The path is unordered!!
             path_of_shop = []
             flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
             sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay]
@@ -2592,7 +2592,7 @@ class NFFGToolBox(object):
                                                            next_output_port,
                                                            outbound=True,
                                                            accept_dyn=True)
-            # the 'outbound_link' is DYNAMIC here or finishes in a SAP, so the 
+            # the 'outbound_link' is DYNAMIC here or finishes in a SAP, so the
             # flowrule sequence finished here.
             sg_map[fr.id][1] = outbound_link.dst
 
@@ -2604,7 +2604,7 @@ class NFFGToolBox(object):
   @staticmethod
   def recreate_all_sghops (nffg):
     """
-    Extracts the SGHop information from the input NFFG, and creates the SGHop 
+    Extracts the SGHop information from the input NFFG, and creates the SGHop
     objects in the NFFG.
 
     :param nffg: the NFFG to look for SGHop info and to modify
