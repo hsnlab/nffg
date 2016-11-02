@@ -2306,7 +2306,7 @@ class NFFGToolBox(object):
     return target
 
   @classmethod
-  def subtract_nffg (cls, minuend, subtrahend):
+  def subtract_nffg (cls, minuend, subtrahend, consider_vnf_status=False):
     """
     Deletes every (all types of) node from minuend which have higher degree in
     subtrahend. And removes every (all types of) edge from minuend which are
@@ -2325,12 +2325,16 @@ class NFFGToolBox(object):
     for n, d in subtrahend.network.degree().iteritems():
       if n in minuend_degrees:
         if d >= minuend_degrees[n]:
-          for edge_func in (minuend.network.in_edges_iter,
-                            minuend.network.out_edges_iter):
-            for i, j, d in edge_func([n], data=True):
-              if d.type == 'SG':
-                minuend.del_flowrules_of_SGHop(d.id)
-          minuend.del_node(minuend.network.node[n])
+          # If their status shall be considered AND the statuses are equal then
+          # they are considered equal and it shouldn't be in the minuend.
+          if consider_vnf_status and subtrahend.network.node[n].status == \
+             minuend.network.node[n].status:
+            for edge_func in (minuend.network.in_edges_iter,
+                              minuend.network.out_edges_iter):
+              for i, j, d in edge_func([n], data=True):
+                if d.type == 'SG':
+                  minuend.del_flowrules_of_SGHop(d.id)
+            minuend.del_node(minuend.network.node[n])
     for i, j, k in subtrahend.network.edges_iter(keys=True):
       if minuend.network.has_edge(i, j, key=k):
         minuend.del_edge(i, j, k)
@@ -2354,7 +2358,7 @@ class NFFGToolBox(object):
     add_nffg.mode = NFFG.MODE_ADD
     del_nffg = copy.deepcopy(old)
     del_nffg.mode = NFFG.MODE_DEL
-    add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old)
+    add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old, consider_vnf_status=True)
     del_nffg = NFFGToolBox.subtract_nffg(del_nffg, new)
     # WARNING: we always remove the EdgeReqs from the delete NFFG, this doesn't
     # have a defined meaning so far.
