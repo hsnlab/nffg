@@ -1830,6 +1830,7 @@ class NFFGToolBox(object):
                                                port2=sbb_infra.add_port(
                                                  id=l.dst.id),
                                                p1p2id=l.id,
+                                               p2p1id="%s-back" % l.id,
                                                dynamic=True,
                                                delay=l.delay,
                                                bandwidth=l.bandwidth)
@@ -1846,6 +1847,7 @@ class NFFGToolBox(object):
                                                port2=sbb_infra.add_port(
                                                  "port-%s" % c_sap.id),
                                                p1p2id=l.id,
+                                               p2p1id="%s-back" % l.id,
                                                delay=l.delay,
                                                bandwidth=l.bandwidth)
         log.debug("Added connection: %s" % link1)
