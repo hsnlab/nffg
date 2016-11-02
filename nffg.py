@@ -2343,7 +2343,7 @@ class NFFGToolBox(object):
     return minuend
 
   @classmethod
-  def generate_difference_of_nffgs (cls, old, new):
+  def generate_difference_of_nffgs (cls, old, new, ignore_infras=False):
     """
     Creates two NFFG objects which can be used in NFFG.MODE_ADD and
     NFFG.MODE_DEL
@@ -2360,6 +2360,11 @@ class NFFGToolBox(object):
     add_nffg.mode = NFFG.MODE_ADD
     del_nffg = copy.deepcopy(old)
     del_nffg.mode = NFFG.MODE_DEL
+    if ignore_infras:
+      for i in [i for i in add_nffg.infras]:
+        add_nffg.del_node(i)
+      for i in [i for i in del_nffg.infras]:
+        del_nffg.del_node(i)
     add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old, consider_vnf_status=True)
     del_nffg = NFFGToolBox.subtract_nffg(del_nffg, new)
     # WARNING: we always remove the EdgeReqs from the delete NFFG, this doesn't
@@ -2509,13 +2514,15 @@ class NFFGToolBox(object):
     consistent = True
     if sg_map[fr_sg.id][2] != flowclass:
       consistent = False
-    if (sg_map[fr_sg.id][3] is None) != (fr_sg.bandwidth is None):
+    if (sg_map[fr_sg.id][3] is None or sg_map[fr_sg.id][3] == float("inf")) != \
+       (fr_sg.bandwidth is None or fr_sg.bandwidth == float("inf")):
       # If not both of them are None
       consistent = False
     elif (sg_map[fr_sg.id][3] is not None) and (fr_sg.bandwidth is not None):
       if consistent and math.fabs(sg_map[fr_sg.id][3] - fr_sg.bandwidth) > 1e-8:
         consistent = False
-    if (sg_map[fr_sg.id][4] is None) != (fr_sg.delay is None):
+    if (sg_map[fr_sg.id][4] is None or sg_map[fr_sg.id][4] == 0.000000000) != \
+       (fr_sg.delay is None or fr_sg.delay == 0.0000000000):
       # If not both of them are None
       consistent = False
     elif (sg_map[fr_sg.id][4] is not None) and (fr_sg.delay is not None):
@@ -2625,8 +2632,8 @@ class NFFGToolBox(object):
         nffg.add_sglink(src, dst, id=sg_hop_id, flowclass=flowclass,
                         bandwidth=bandwidth, delay=delay)
       else:
-        sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
-        NFFGToolBox._check_flow_consistencity(sg_map, sg_hop)
+         sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
+         NFFGToolBox._check_flow_consistencity(sg_map, sg_hop)
     return nffg
 
 
