@@ -2365,7 +2365,7 @@ class NFFGToolBox(object):
     del_nffg.mode = NFFG.MODE_DEL
     if ignore_infras:
       for nffg in [old_copy, new_copy, add_nffg, del_nffg]:
-        for i in [i for i in add_nffg.infras]:
+        for i in [i for i in nffg.infras]:
           nffg.del_node(i)
     add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old_copy, 
                                          consider_vnf_status=True)
