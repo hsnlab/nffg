@@ -2356,18 +2356,20 @@ class NFFGToolBox(object):
     :return: a tuple of NFFG-s for addition and deletion resp. on old config.
     :rtype: tuple
     """
+    old_copy = copy.deepcopy(old)
+    new_copy = copy.deepcopy(new)
     add_nffg = copy.deepcopy(new)
     add_nffg_ret = copy.deepcopy(new)
     add_nffg.mode = NFFG.MODE_ADD
     del_nffg = copy.deepcopy(old)
     del_nffg.mode = NFFG.MODE_DEL
     if ignore_infras:
-      for i in [i for i in add_nffg.infras]:
-        add_nffg.del_node(i)
-      for i in [i for i in del_nffg.infras]:
-        del_nffg.del_node(i)
-    add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old, consider_vnf_status=True)
-    del_nffg = NFFGToolBox.subtract_nffg(del_nffg, new)
+      for nffg in [old_copy, new_copy, add_nffg, del_nffg]:
+        for i in [i for i in add_nffg.infras]:
+          nffg.del_node(i)
+    add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old_copy, 
+                                         consider_vnf_status=True)
+    del_nffg = NFFGToolBox.subtract_nffg(del_nffg, new_copy)
     # WARNING: we always remove the EdgeReqs from the delete NFFG, this doesn't
     # have a defined meaning so far.
     for req in [r for r in del_nffg.reqs]:
