@@ -2358,8 +2358,10 @@ class NFFGToolBox(object):
     """
     old_copy = copy.deepcopy(old)
     new_copy = copy.deepcopy(new)
+
     add_nffg = copy.deepcopy(new)
     add_nffg_ret = copy.deepcopy(new)
+    add_nffg_ret.mode = NFFG.MODE_ADD
     add_nffg.mode = NFFG.MODE_ADD
     del_nffg = copy.deepcopy(old)
     del_nffg.mode = NFFG.MODE_DEL
@@ -2383,7 +2385,8 @@ class NFFGToolBox(object):
       # the flowrules of the removed SGHops shall be removed too! This should be 
       # done before VNF removal so we have the links inside the NFFG
       for sg in [s for s in add_nffg_ret.sg_hops]:
-        if (sg.src.id, sg.dst.id, sg.id) not in add_nffg.network.edges(keys=True):
+        if (sg.src.node.id, sg.dst.node.id, sg.id) not in \
+           add_nffg.network.edges(keys=True):
           add_nffg_ret.del_edge(sg.src, sg.dst, sg.id)
           add_nffg_ret.del_flowrules_of_SGHop(sg.id)
       # removing the unnecessary infras will remove the DYNAMIC links too.
