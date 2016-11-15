@@ -2389,7 +2389,8 @@ class NFFGToolBox(object):
     add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old, 
                                          consider_vnf_status=True, 
                                          ignore_infras=ignore_infras)
-    del_nffg = NFFGToolBox.subtract_nffg(del_nffg, new)
+    del_nffg = NFFGToolBox.subtract_nffg(del_nffg, new,
+                                         ignore_infras=ignore_infras)
     # WARNING: we always remove the EdgeReqs from the delete NFFG, this doesn't
     # have a defined meaning so far.
     for req in [r for r in del_nffg.reqs]:
