@@ -1364,10 +1364,12 @@ class NFFGToolBox(object):
           domain_port_nffg.properties.update(domain_port_dov.properties)
           log.debug("Copy inter-domain port properties: %s" %
                     domain_port_nffg.properties)
-        else:
+        # Ensure to add sap tag to inter domain ports
+        if 'sap' not in domain_port_dov.properties:
           domain_port_dov.add_property("sap", sap_id)
+        if 'sap' not in domain_port_nffg.properties:
           domain_port_nffg.add_property("sap", sap_id)
-        # Signal Inter-domain port
+        # Signal Inter-domain port type
         domain_port_dov.add_property("type", "inter-domain")
         domain_port_nffg.add_property("type", "inter-domain")
 
