@@ -488,11 +488,13 @@ class Port(Element):
   # Port type
   TYPE = "PORT"
   """Port type"""
+  ROLE_CONSUMER = "consumer"
+  ROLE_PROVIDER = "provider"
 
   def __init__ (self, node, id=None, name=None, properties=None, sap=None,
-                capability=None, technology=None, delay=None, bandwidth=None,
-                cost=None, controller=None, orchestrator=None, l2=None, l4=None,
-                metadata=None):
+                capability=None, technology=None, role=None, delay=None,
+                bandwidth=None, cost=None, controller=None, orchestrator=None,
+                l2=None, l4=None, metadata=None):
     """
     Init.
 
@@ -544,6 +546,8 @@ class Port(Element):
     self.capability = capability
     # sap_data
     self.technology = technology
+    # sap_data/role
+    self.role = role
     # sap_data/resources
     self.delay = delay
     self.bandwidth = bandwidth
@@ -689,11 +693,13 @@ class Port(Element):
       port['sap'] = self.sap
     if self.capability is not None:
       port['capability'] = self.capability
-    if any(v is not None for v in (self.technology, self.delay, self.bandwidth,
-                                   self.cost)):
+    if any(v is not None for v in (self.technology, self.role, self.delay,
+                                   self.bandwidth, self.cost)):
       port['sap_data'] = {}
       if self.technology is not None:
         port['sap_data']['technology'] = self.technology
+      if self.role is not None:
+        port['sap_data']['role'] = self.role
       if any(v is not None for v in (self.delay, self.bandwidth, self.cost)):
         port['sap_data']['resources'] = {}
         if self.delay is not None:
@@ -729,6 +735,7 @@ class Port(Element):
     :type data: dict
     :return: None
     """
+    print data
     super(Port, self).load(data=data)
     self.properties = OrderedDict(data.get('property', ()))
     self.sap = data.get('sap')
@@ -736,6 +743,7 @@ class Port(Element):
     self.capability = data.get('capability')
     if 'sap_data' in data:
       self.technology = data['sap_data'].get('technology')
+      self.role = data['sap_data'].get('role')
       if 'resources' in data['sap_data']:
         self.delay = data['sap_data']['resources'].get('delay')
         self.bandwidth = data['sap_data']['resources'].get('bandwidth')
@@ -1486,7 +1494,7 @@ class Flowrule(Element):
     :rtype: str
     """
     return "%s(match: %s, action: %s, bandwidth: %s, delay: %s)" % (
-      self.__class__.__name__, self.match, self.action, self.bandwidth, 
+      self.__class__.__name__, self.match, self.action, self.bandwidth,
       self.delay)
 
 
