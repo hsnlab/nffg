@@ -1889,6 +1889,29 @@ class NodeInfra(Node):
     else:
       self.supported.remove(functional_type)
 
+  def has_enough_resource (self, res):
+    """
+    Checks whether this :any:`NodeInfra` has at least 'res' resources available.
+    
+    :param res: res name
+    :type res: :any:`NodeResource`
+    :return: has enough resource or not
+    :rtype: bool
+    """
+    if not hasattr(self, 'availres'):
+      raise RuntimeError("Available resources not yet calculated for Infra %s!"
+                         " Call calculate_available_node_res function first on "
+                         "the containing NFFG instance!"%self.id)
+    try:
+      from copy import deepcopy
+      # do not do the actual subtraction!
+      availres = deepcopy(self.availres)
+      # throws RuntimeError if it couldn't be subtracted.
+      availres.subtractNodeRes(res, self.resources)
+      return True
+    except RuntimeError:
+      return False
+
   def persist (self):
     """
     Persist object.
