@@ -735,7 +735,6 @@ class Port(Element):
     :type data: dict
     :return: None
     """
-    print data
     super(Port, self).load(data=data)
     self.properties = OrderedDict(data.get('property', ()))
     self.sap = data.get('sap')
