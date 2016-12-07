@@ -33,11 +33,10 @@ class Persistable(object):
     """
     Common function to persist the actual element into a plain text format.
 
-    :raise: :any:`exceptions.NotImplementedError`
-    :return: generated object structure fit to JSON
-    :rtype: object
+    :return: generated empty object fit to JSON
+    :rtype: dict
     """
-    raise NotImplementedError("All NF-FG entity must be persistable!")
+    return OrderedDict()
 
   def load (self, data, *args, **kwargs):
     """
@@ -47,7 +46,7 @@ class Persistable(object):
     :param data: object structure in JSON
     :return: self
     """
-    raise NotImplementedError("All NF-FG entity must support load function!")
+    pass
 
   @classmethod
   def parse (cls, data, *args, **kwargs):
@@ -127,7 +126,8 @@ class Element(Persistable):
     :rtype: dict
     """
     # Need to override
-    element = OrderedDict(id=self.id)
+    element = super(Element, self).persist()
+    element['id'] = self.id
     if self.operation is not None:
       element["operation"] = self.operation
     if self.status is not None:
@@ -143,6 +143,7 @@ class Element(Persistable):
     :return: None
     """
     self.id = data['id']
+    super(Element, self).load(data=data)
     self.operation = data.get("operation")  # optional
     self.status = data.get("status")  # optional
     return self
@@ -922,6 +923,78 @@ class PortContainer(Persistable):
     pass
 
 
+class Constraints(Persistable):
+  """
+  Container class for constraints.
+  """
+
+  def __init__ (self):
+    super(Constraints, self).__init__()
+    self.affinity = []
+    self.antiaffinity = []
+    self.variable = OrderedDict()
+    self.constraint = []
+
+  def add_affinity (self, id):
+    self.affinity.append(id)
+    return id
+
+  def has_affinity (self, id):
+    return id in self.affinity
+
+  def del_affinity (self, id):
+    self.affinity.remove(id)
+
+  def add_antiaffinity (self, id):
+    self.antiaffinity.append(id)
+    return id
+
+  def has_antiaffinity (self, id):
+    return id in self.antiaffinity
+
+  def del_antiaffinity (self, id):
+    self.antiaffinity.remove(id)
+
+  def add_variable (self, key, id):
+    self.variable[key] = id
+
+  def has_variable (self, key):
+    return key in self.variable
+
+  def del_variable (self, key):
+    return self.variable.pop(key, None)
+
+  def add_constraint (self, formula):
+    self.constraint.append(formula)
+    return id
+
+  def has_constraint (self, formula):
+    return formula in self.constraint
+
+  def del_constraint (self, formula):
+    self.constraint.remove(formula)
+
+  def persist (self):
+    constraints = super(Constraints, self).persist()
+    if self.affinity:
+      constraints['affinity'] = self.affinity
+    if self.antiaffinity:
+      constraints['antiaffinity'] = self.antiaffinity
+    if self.variable:
+      constraints['variable'] = self.variable
+    if self.constraint:
+      constraints['constraint'] = self.constraint
+    return constraints
+
+  def load (self, data, *args, **kwargs):
+    super(Constraints, self).load(data=data)
+    self.affinity = data.get('affinity', [])
+    self.antiaffinity = data.get('antiaffinity', [])
+    self.variable = data.get('variable', OrderedDict())
+    self.constraint = data.get('constraint', [])
+    return self
+
+
 class Node(Element):
   """
   Base class for different types of nodes in the NF-FG.
@@ -955,6 +1028,7 @@ class Node(Element):
     self.name = name if name is not None else str(id)  # optional
     self.ports = PortContainer()  # list of Ports
     self.metadata = OrderedDict(metadata if metadata else {})
+    self.constraints = Constraints()
 
   @property
   def short_name (self):
@@ -1115,6 +1189,9 @@ class Node(Element):
       node["ports"] = ports
     if self.metadata:
       node["metadata"] = self.metadata.copy()
+    constraints = self.constraints.persist()
+    if constraints:
+      node['constraints'] = constraints
     return node
 
   def load (self, data, *args, **kwargs):
@@ -1132,6 +1209,8 @@ class Node(Element):
       port.load(data=item)
       self.ports.append(port)
     self.metadata = OrderedDict(data.get('metadata', ()))
+    if 'constraints' in data:
+      self.constraints.load(data=data['constraints'])
     return self
 
   def __repr__ (self):
@@ -1324,7 +1403,7 @@ class NodeResource(Persistable):
     :return: JSON representation
     :rtype: dict
     """
-    res = OrderedDict()
+    res = super(NodeResource, self).persist()
     if self.cpu is not None:
       res["cpu"] = self.cpu
     if self.mem is not None:
@@ -1900,7 +1979,7 @@ class NodeInfra(Node):
     if not hasattr(self, 'availres'):
       raise RuntimeError("Available resources not yet calculated for Infra %s!"
                          " Call calculate_available_node_res function first on "
-                         "the containing NFFG instance!"%self.id)
+                         "the containing NFFG instance!" % self.id)
     try:
       from copy import deepcopy
       # do not do the actual subtraction!
@@ -2298,11 +2377,10 @@ class NFFGModel(Element):
     :type version: str
     :return: None
     """
-    super(NFFGModel, self).__init__(id=id, type=self.TYPE)
+    super(NFFGModel, self).__init__(id=id, type=self.TYPE, status=status)
     self.name = name
     self.version = version if version is not None else self.VERSION
     self.metadata = OrderedDict(metadata if metadata else ())
-    self.status = status
     self.mode = mode
     self.node_nfs = []
     self.node_saps = []
@@ -2559,6 +2637,7 @@ class NFFGModel(Element):
     :return: JSON representation
     :rtype: dict
     """
+    super(NFFGModel, self).persist()
     nffg = OrderedDict(parameters=OrderedDict(id=self.id))
     if self.name is not None:
       nffg["parameters"]["name"] = self.name
