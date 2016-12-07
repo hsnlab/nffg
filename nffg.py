@@ -1495,7 +1495,7 @@ class NFFGToolBox(object):
 
     if len(domains) == 0:
       log.warning("No domain has been detected!")
-      return
+      return splitted_parts
 
     # Checks every domain
     for domain in domains:
