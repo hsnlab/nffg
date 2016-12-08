@@ -957,6 +957,7 @@ class Constraints(Persistable):
 
   def add_variable (self, key, id):
     self.variable[key] = id
+    return id
 
   def has_variable (self, key):
     return key in self.variable
@@ -966,7 +967,7 @@ class Constraints(Persistable):
 
   def add_constraint (self, formula):
     self.constraint.append(formula)
-    return id
+    return formula
 
   def has_constraint (self, formula):
     return formula in self.constraint
