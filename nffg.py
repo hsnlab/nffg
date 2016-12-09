@@ -953,7 +953,6 @@ class NFFG(AbstractNFFG):
     return [sg for sg in self.sg_hops if sg.src.node.id == nf_id or \
             sg.dst.node.id == nf_id]
 
-
   def infra_neighbors (self, node_id):
     """
     Return an iterator for the Infra nodes which are neighbours of the given
@@ -1009,7 +1008,9 @@ class NFFG(AbstractNFFG):
     :return: deep copy
     :rtype: :any:`NFFG`
     """
-    copy = NFFG(id=self.id, name=self.name, version=self.version)
+    copy = NFFG(id=self.id, name=self.name, version=self.version,
+                mode=self.mode, metadata=self.metadata.copy(),
+                status=self.status)
     copy.network = self.network.copy()
     return copy
 
@@ -2325,7 +2326,7 @@ class NFFGToolBox(object):
     return target
 
   @classmethod
-  def subtract_nffg (cls, minuend, subtrahend, consider_vnf_status=False, 
+  def subtract_nffg (cls, minuend, subtrahend, consider_vnf_status=False,
                      ignore_infras=False):
     """
     Deletes every (all types of) node from minuend which have higher degree in
@@ -2356,7 +2357,9 @@ class NFFGToolBox(object):
           # If their status shall be considered AND the statuses are equal then
           # they are considered equal and it shouldn't be in the minuend.
           if not consider_vnf_status or (consider_vnf_status and \
-            subtrahend.network.node[n].status == minuend.network.node[n].status):
+                                              subtrahend.network.node[
+                                                n].status ==
+                                              minuend.network.node[n].status):
             for edge_func in (minuend.network.in_edges_iter,
                               minuend.network.out_edges_iter):
               for i, j, d in edge_func([n], data=True):
@@ -2391,8 +2394,8 @@ class NFFGToolBox(object):
     add_nffg.mode = NFFG.MODE_ADD
     del_nffg = copy.deepcopy(old)
     del_nffg.mode = NFFG.MODE_DEL
-    add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old, 
-                                         consider_vnf_status=True, 
+    add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old,
+                                         consider_vnf_status=True,
                                          ignore_infras=ignore_infras)
     del_nffg = NFFGToolBox.subtract_nffg(del_nffg, new,
                                          ignore_infras=ignore_infras)
@@ -2663,10 +2666,11 @@ class NFFGToolBox(object):
       if not nffg.network.has_edge(src.node.id, dst.node.id, key=sg_hop_id):
         nffg.add_sglink(src, dst, id=sg_hop_id, flowclass=flowclass,
                         bandwidth=bandwidth, delay=delay)
-      # causes unnecesary failures, when bandwidth or delay is missing somewhere
-      # else:
-      #    sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
-      #    NFFGToolBox._check_flow_consistencity(sg_map, sg_hop)
+        # causes unnecesary failures, when bandwidth or delay is missing
+        # somewhere
+        # else:
+        #    sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
+        #    NFFGToolBox._check_flow_consistencity(sg_map, sg_hop)
     return nffg
 
 

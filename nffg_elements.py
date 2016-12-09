@@ -930,30 +930,30 @@ class Constraints(Persistable):
 
   def __init__ (self):
     super(Constraints, self).__init__()
-    self.affinity = []
-    self.antiaffinity = []
+    self.affinity = {}
+    self.antiaffinity = {}
     self.variable = OrderedDict()
     self.constraint = []
 
-  def add_affinity (self, id):
-    self.affinity.append(id)
-    return id
+  def add_affinity (self, id, value):
+    self.affinity[id] = value
+    return value
 
   def has_affinity (self, id):
     return id in self.affinity
 
   def del_affinity (self, id):
-    self.affinity.remove(id)
+    del self.affinity[id]
 
-  def add_antiaffinity (self, id):
-    self.antiaffinity.append(id)
-    return id
+  def add_antiaffinity (self, id, value):
+    self.antiaffinity[id] = value
+    return value
 
   def has_antiaffinity (self, id):
     return id in self.antiaffinity
 
   def del_antiaffinity (self, id):
-    self.antiaffinity.remove(id)
+    del self.antiaffinity[id]
 
   def add_variable (self, key, id):
     self.variable[key] = id
@@ -989,8 +989,8 @@ class Constraints(Persistable):
 
   def load (self, data, *args, **kwargs):
     super(Constraints, self).load(data=data)
-    self.affinity = data.get('affinity', [])
-    self.antiaffinity = data.get('antiaffinity', [])
+    self.affinity = data.get('affinity', OrderedDict())
+    self.antiaffinity = data.get('antiaffinity', OrderedDict())
     self.variable = data.get('variable', OrderedDict())
     self.constraint = data.get('constraint', [])
     return self
