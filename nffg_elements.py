@@ -933,7 +933,7 @@ class Constraints(Persistable):
     self.affinity = {}
     self.antiaffinity = {}
     self.variable = OrderedDict()
-    self.constraint = []
+    self.constraint = {}
 
   def add_affinity (self, id, value):
     self.affinity[id] = value
@@ -943,7 +943,7 @@ class Constraints(Persistable):
     return id in self.affinity
 
   def del_affinity (self, id):
-    del self.affinity[id]
+    return self.affinity.pop(id, None)
 
   def add_antiaffinity (self, id, value):
     self.antiaffinity[id] = value
@@ -953,7 +953,7 @@ class Constraints(Persistable):
     return id in self.antiaffinity
 
   def del_antiaffinity (self, id):
-    del self.antiaffinity[id]
+    return self.antiaffinity.pop(id, None)
 
   def add_variable (self, key, id):
     self.variable[key] = id
@@ -965,15 +965,15 @@ class Constraints(Persistable):
   def del_variable (self, key):
     return self.variable.pop(key, None)
 
-  def add_constraint (self, formula):
-    self.constraint.append(formula)
+  def add_constraint (self, id, formula):
+    self.constraint[id] = formula
     return formula
 
-  def has_constraint (self, formula):
-    return formula in self.constraint
+  def has_constraint (self, id):
+    return id in self.constraint
 
-  def del_constraint (self, formula):
-    self.constraint.remove(formula)
+  def del_constraint (self, id):
+    return self.constraint.pop(id, None)
 
   def persist (self):
     constraints = super(Constraints, self).persist()
