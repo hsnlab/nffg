@@ -208,6 +208,8 @@ class NFFG(AbstractNFFG):
     :type name: str
     :param mode: describe how to handle the defined elements (defaul: ADD)
     :type mode: str
+    :param metadata: optional metadata for NFFG
+    :type metadata: dict
     :param status: optional info for NFFG
     :type status: str
     :param version: optional version (default: 1.0)
