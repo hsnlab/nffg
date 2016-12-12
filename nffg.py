@@ -1565,7 +1565,7 @@ class NFFGToolBox(object):
     for infra in nffg.infras:
       # Iterate over flowrules of the infra
       for flowrule in infra.flowrules():
-        # Get the source in_port of the flowrule from match filed
+        # Get the source in_port of the flowrule from match field
         splitted = flowrule.match.split(';', 1)
         in_port = splitted[0].split('=')[1]
         try:
@@ -1634,42 +1634,73 @@ class NFFGToolBox(object):
           log.error(
             "Link for SAP: %s is not found." % sap)
           continue
-
       for infra in nffg[1].infras:
-        log.debug("Processing infra %s" % infra)
-        for port in infra.ports:
-          # collect inbound flowrules of SAP ports
-          if port in sap_ports:
-            for flowrule in port.flowrules:
-              log.debug(
-                "Processing FLOWRULE: %s" % flowrule)
-              # collect inbound flowrules of SAP ports
-              log.debug(
-                "MATCH: %s" % flowrule.match)
-              log.debug(
-                "ACTION: %s" % flowrule.action)
+        # log.debug("Processing infra %s" % infra)
+        for flowrule in infra.flowrules():
+          for sap_port in sap_ports:
+            if sap_port.get_property('type') == "inter-domain":
+              log.debug("Found inter-domain port: %s, %s" %
+                        (sap_port, sap_port.sap))
+              # process inbound flowrules of SAP ports
+              if re.search('in_port=', flowrule.match):
+                in_port = re.sub(r'.*in_port=([^;]*).*', r'\1',
+                                 flowrule.match)
+                if str(in_port) == str(sap_port.id):
+                  # found inbound rule
+                  log.debug("Found inbound flowrule: %s" % flowrule)
+                  if not re.search(r'TAG', flowrule.match):
+                    match_tag = ";TAG=<None>|<None>|%s" % flowrule.id
+                    flowrule.match += match_tag
+                    log.warn("TAG conversion: extend match field in a "
+                             "flowrule of infra %s" % infra.id)
+                    log.warn("updated flowrule: %s" % flowrule)
+              # process outbound flowrules of SAP ports
+              if re.search('output=', flowrule.action):
+                output = re.sub(r'.*output=([^;]*).*', r'\1',
+                                flowrule.action)
+                if str(output) == str(sap_port.id):
+                  # found outbound rule
+                  log.debug("Found outbound rule: %s" % flowrule)
+                  if not re.search(r'TAG', flowrule.action):
+                    push_tag = ";TAG=<None>|<None>|%s" % flowrule.id
+                    flowrule.action += push_tag
+                    log.warn("TAG conversion: extend action field in a "
+                             "flowrule of infra %s" % infra.id)
+                    log.warn("updated flowrule: %s" % flowrule)
+            else:
+              # process user SAP port (not inter-domain)
+              pass
+                    
+        # for port in infra.ports:
+        #   if port not in sap_ports:
+        #     continue
+        #   if port.get_property('type') == "inter-domain":
+        #     log.debug("Found inter-domain port: %s, %s" % (port, port.sap))
+        #     # process inter-domain SAP port
+        #     for flowrule in port.flowrules:
+        #       log.debug(
+        #         "Processing FLOWRULE: %s" % flowrule)
+        #       # collect inbound flowrules of SAP ports
+        #       if not re.search(r'TAG', flowrule.match):
+        #         match_vlan = ";TAG=<None>|<None>|%s" % flowrule.id
+        #         flowrule.match += match_vlan
+        #         log.debug("TAG conversion: extend match field: %s"
+        #                   % flowrule.match)
 
-              if re.search(r'TAG', flowrule.match):
-                tag_field = re.sub(r'.*(TAG=.*);?', r'\1', flowrule.match)
-                # TODO:
-                # check exact tag from upper level
+        #         # tag_field = re.sub(r'.*(TAG=.*);?', r'\1', flowrule.match)
+        #         # TODO:
+        #         # check exact tag from upper level
+        #         # generate exact tag
+        #         # tag_id = re.sub(r'.*TAG=.*\|(.*);?', r'\1', flowrule.match)
+        #         # tag_exact = tag
+                
+        #       else:
+        #         # collect outbound flowrules toward SAP ports
+        #         pass
 
-                # generate exact tag
-                tag_id = re.sub(r'.*TAG=.*\|(.*);?', r'\1', flowrule.match)
-                # tag_exact = tag
-
-          # collect outbound flowrules toward SAP ports
-          else:
-            pass
-
-            #     if sap.domain is not None:
-            #       # inter-domain saps
-            #       pass
-            #     else:
-            #       # host saps
-            #       pass
-
-            #     # collect outbound flowrules
+        #   else:
+        #     # process user SAP port (not inter-domain)
+        #     pass
 
     return slices
 
