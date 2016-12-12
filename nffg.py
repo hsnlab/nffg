@@ -1638,7 +1638,7 @@ class NFFGToolBox(object):
         # log.debug("Processing infra %s" % infra)
         for flowrule in infra.flowrules():
           for sap_port in sap_ports:
-            if sap_port.get_property('type') == "inter-domain":
+            if sap_port.sap is not None:
               log.debug("Found inter-domain port: %s, %s" %
                         (sap_port, sap_port.sap))
               # process inbound flowrules of SAP ports
