@@ -2404,12 +2404,18 @@ class NFFGToolBox(object):
     # WARNING: we always remove the EdgeReqs from the delete NFFG, this doesn't
     # have a defined meaning so far.
     for req in [r for r in del_nffg.reqs]:
-      del_nffg.del_edge(r.src, r.dst, r.id)
+      del_nffg.del_edge(req.src, req.dst, req.id)
     for n, d in [t for t in del_nffg.network.nodes(data=True)]:
       if del_nffg.network.out_degree(n) + del_nffg.network.in_degree(n) == 0:
         del_nffg.del_node(d)
     # The output ADD NFFG shall still include the Infras even if they were 
     # ignored during the difference calculation.
+
+    # Copy data from new NFFG to old NFFG
+    add_nffg.id = del_nffg.id = new.id
+    add_nffg.name = del_nffg.name = new.name
+    add_nffg.metadata = new.metadata.copy()
+    del_nffg.metadata = new.metadata.copy()
 
     return add_nffg, del_nffg
 
