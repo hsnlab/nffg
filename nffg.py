@@ -1651,9 +1651,9 @@ class NFFGToolBox(object):
                   if not re.search(r'TAG', flowrule.match):
                     match_tag = ";TAG=<None>|<None>|%s" % flowrule.id
                     flowrule.match += match_tag
-                    log.warn("TAG conversion: extend match field in a "
+                    log.info("TAG conversion: extend match field in a "
                              "flowrule of infra %s" % infra.id)
-                    log.warn("updated flowrule: %s" % flowrule)
+                    log.info("updated flowrule: %s" % flowrule)
               # process outbound flowrules of SAP ports
               if re.search('output=', flowrule.action):
                 output = re.sub(r'.*output=([^;]*).*', r'\1',
@@ -1664,9 +1664,9 @@ class NFFGToolBox(object):
                   if not re.search(r'TAG', flowrule.action):
                     push_tag = ";TAG=<None>|<None>|%s" % flowrule.id
                     flowrule.action += push_tag
-                    log.warn("TAG conversion: extend action field in a "
+                    log.info("TAG conversion: extend action field in a "
                              "flowrule of infra %s" % infra.id)
-                    log.warn("updated flowrule: %s" % flowrule)
+                    log.info("updated flowrule: %s" % flowrule)
             else:
               # process user SAP port (not inter-domain)
               pass
