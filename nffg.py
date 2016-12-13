@@ -1599,7 +1599,8 @@ class NFFGToolBox(object):
           log.debug("Manually extended match field: %s" % flowrule.match)
 
   @classmethod
-  def rewrite_interdomain_tags (cls, slices, log=logging.getLogger("TAG")):
+  def rewrite_interdomain_tags (cls, slices,
+                                log=logging.getLogger("adaptation.TAG")):
     """
     Calculate and rewrite inter-domain tags.
 
@@ -1638,70 +1639,65 @@ class NFFGToolBox(object):
         # log.debug("Processing infra %s" % infra)
         for flowrule in infra.flowrules():
           for sap_port in sap_ports:
-            if sap_port.sap is not None:
-              log.debug("Found inter-domain port: %s, %s" %
-                        (sap_port, sap_port.sap))
-              # process inbound flowrules of SAP ports
-              if re.search('in_port=', flowrule.match):
-                in_port = re.sub(r'.*in_port=([^;]*).*', r'\1',
-                                 flowrule.match)
-                if str(in_port) == str(sap_port.id):
-                  # found inbound rule
-                  log.debug("Found inbound flowrule: %s" % flowrule)
+            # process inbound flowrules of SAP ports
+            if re.search('in_port=', flowrule.match):
+              in_port = re.sub(r'.*in_port=([^;]*).*', r'\1',
+                               flowrule.match)
+              if str(in_port) == str(sap_port.id):
+                # found inbound rule
+                log.debug("Found inbound flowrule: %s" % flowrule)
+                if sap_port.sap is not None:
+                  log.debug("Found inter-domain SAP port: %s, %s" %
+                            (sap_port, sap_port.sap))
+                  # rewrite TAG in match field
                   if not re.search(r'TAG', flowrule.match):
                     match_tag = ";TAG=<None>|<None>|%s" % flowrule.id
                     flowrule.match += match_tag
                     log.info("TAG conversion: extend match field in a "
                              "flowrule of infra %s" % infra.id)
                     log.info("updated flowrule: %s" % flowrule)
-              # process outbound flowrules of SAP ports
-              if re.search('output=', flowrule.action):
-                output = re.sub(r'.*output=([^;]*).*', r'\1',
-                                flowrule.action)
-                if str(output) == str(sap_port.id):
-                  # found outbound rule
-                  log.debug("Found outbound rule: %s" % flowrule)
+                else:
+                  log.debug("Found user SAP port: %s" %
+                            sap_port)
+                  # remove TAG from match field
+                  if re.search(r'TAG', flowrule.match):
+                    flowrule.match = re.sub(r'(;TAG=[^;]*)', r'',
+                                            flowrule.match)
+                    log.info("TAG conversion: remove TAG match in a "
+                             "flowrule of infra %s" % infra.id)
+                    log.info("updated flowrule: %s" % flowrule)
+            # process outbound flowrules of SAP ports
+            if re.search('output=', flowrule.action):
+              output = re.sub(r'.*output=([^;]*).*', r'\1',
+                              flowrule.action)
+              if str(output) == str(sap_port.id):
+                # found outbound rule
+                log.debug("Found outbound rule: %s" % flowrule)
+                if sap_port.sap is not None:
+                  log.debug("Found inter-domain SAP port: %s, %s" %
+                            (sap_port, sap_port.sap))
+                  # rewrite TAG in action field
                   if not re.search(r'TAG', flowrule.action):
                     push_tag = ";TAG=<None>|<None>|%s" % flowrule.id
                     flowrule.action += push_tag
                     log.info("TAG conversion: extend action field in a "
                              "flowrule of infra %s" % infra.id)
                     log.info("updated flowrule: %s" % flowrule)
-            else:
-              # process user SAP port (not inter-domain)
-              pass
-                    
-        # for port in infra.ports:
-        #   if port not in sap_ports:
-        #     continue
-        #   if port.get_property('type') == "inter-domain":
-        #     log.debug("Found inter-domain port: %s, %s" % (port, port.sap))
-        #     # process inter-domain SAP port
-        #     for flowrule in port.flowrules:
-        #       log.debug(
-        #         "Processing FLOWRULE: %s" % flowrule)
-        #       # collect inbound flowrules of SAP ports
-        #       if not re.search(r'TAG', flowrule.match):
-        #         match_vlan = ";TAG=<None>|<None>|%s" % flowrule.id
-        #         flowrule.match += match_vlan
-        #         log.debug("TAG conversion: extend match field: %s"
-        #                   % flowrule.match)
-
-        #         # tag_field = re.sub(r'.*(TAG=.*);?', r'\1', flowrule.match)
-        #         # TODO:
-        #         # check exact tag from upper level
-        #         # generate exact tag
-        #         # tag_id = re.sub(r'.*TAG=.*\|(.*);?', r'\1', flowrule.match)
-        #         # tag_exact = tag
-                
-        #       else:
-        #         # collect outbound flowrules toward SAP ports
-        #         pass
-
-        #   else:
-        #     # process user SAP port (not inter-domain)
-        #     pass
-
+                else:
+                  log.debug("Found user SAP port: %s" %
+                            sap_port)
+                  # remove TAG from action field
+                  if re.search(r';TAG', flowrule.action):
+                    flowrule.action = re.sub(r'(;TAG=[^;]*)', r'',
+                                             flowrule.action)
+                    log.info("TAG conversion: remove TAG action in a "
+                             "flowrule of infra %s" % infra.id)
+                  # add UNTAG to action field
+                  if not re.search(r'UNTAG', flowrule.action):
+                    flowrule.action += ';UNTAG'
+                    log.info("TAG conversion: add UNTAG action in a "
+                             "flowrule of infra %s" % infra.id)
+                    log.info("updated flowrule: %s" % flowrule)
     return slices
 
   @staticmethod
