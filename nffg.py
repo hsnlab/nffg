@@ -47,19 +47,19 @@ class AbstractNFFG(object):
     """
     Add a single NF node to the NF-FG.
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def add_sap (self):
     """
     Add a single SAP node to the NF-FG.
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def add_infra (self):
     """
     Add a single infrastructure node to the NF-FG.
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def add_link (self, src, dst):
     """
@@ -68,7 +68,7 @@ class AbstractNFFG(object):
     :param src: source port
     :param dst: destination port
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def add_sglink (self, src, dst):
     """
@@ -77,7 +77,7 @@ class AbstractNFFG(object):
     :param src: source port
     :param dst: destination port
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def add_req (self, src, dst):
     """
@@ -86,7 +86,7 @@ class AbstractNFFG(object):
     :param src: source port
     :param dst: destination port
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def add_node (self, node):
     """
@@ -94,7 +94,7 @@ class AbstractNFFG(object):
 
     :param node: node object
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def del_node (self, id):
     """
@@ -102,7 +102,7 @@ class AbstractNFFG(object):
 
     :param id: id of the node
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def add_edge (self, src, dst, link):
     """
@@ -112,7 +112,7 @@ class AbstractNFFG(object):
     :param dst: destination port
     :param link: link object
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def del_edge (self, src, dst):
     """
@@ -121,7 +121,7 @@ class AbstractNFFG(object):
     :param src: source port
     :param dst: destination port
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   ##############################################################################
   # General functions for create/parse/dump/convert NFFG
@@ -138,7 +138,7 @@ class AbstractNFFG(object):
     :return: parsed NFFG as an XML object
     :rtype: :class:`Virtualizer`
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
   def dump (self):
     """
@@ -148,7 +148,7 @@ class AbstractNFFG(object):
     :return: plain text representation
     :rtype: str
     """
-    raise NotImplementedError("Not implemented yet!")
+    raise NotImplementedError
 
 
 class NFFG(AbstractNFFG):
