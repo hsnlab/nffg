@@ -2365,8 +2365,8 @@ class NFFGModel(Element):
   # Container type
   TYPE = "NFFG"
 
-  def __init__ (self, id=None, name=None, metadata=None, mode=None, status=None,
-                version=None):
+  def __init__ (self, id=None, name=None, service_id=None, metadata=None,
+                mode=None, status=None, version=None):
     """
     Init.
 
@@ -2374,12 +2374,15 @@ class NFFGModel(Element):
     :type id: str or int
     :param name: optional NF-FG name
     :type name: str
+    :param service_id: service id this NFFG is originated from
+    :type service_id: str or int
     :param version: optional version (default: 1.0)
     :type version: str
     :return: None
     """
     super(NFFGModel, self).__init__(id=id, type=self.TYPE, status=status)
     self.name = name
+    self.service_id = service_id
     self.version = version if version is not None else self.VERSION
     self.metadata = OrderedDict(metadata if metadata else ())
     self.mode = mode
@@ -2642,6 +2645,8 @@ class NFFGModel(Element):
     nffg = OrderedDict(parameters=OrderedDict(id=self.id))
     if self.name is not None:
       nffg["parameters"]["name"] = self.name
+    if self.service_id is not None:
+      nffg["parameters"]["service_id"] = self.service_id
     nffg["parameters"]["version"] = self.version
     if self.metadata:
       nffg["parameters"]["metadata"] = self.metadata
@@ -2701,6 +2706,7 @@ class NFFGModel(Element):
       container = NFFGModel(
         id=data['parameters'].get('id'),  # mandatory
         name=data['parameters'].get('name'),  # can be None
+        service_id=data['parameters'].get('service_id'),  # can be None
         metadata=data['parameters'].get('metadata'),
         mode=data['parameters'].get('mode'),
         status=data['parameters'].get('status'),
