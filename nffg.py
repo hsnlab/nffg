@@ -1527,8 +1527,7 @@ class NFFGToolBox(object):
       # Copy the NFFG
       nffg_part = nffg.copy()
       # Set metadata
-      nffg_part.id = domain
-      nffg_part.name = domain + "-splitted"
+      nffg_part.name = domain
       # Delete needless nodes --> and as a side effect the connected links too
       log.debug("Delete marked nodes...")
       nffg_part.network.remove_nodes_from(deletable)
