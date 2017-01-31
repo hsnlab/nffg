@@ -1801,7 +1801,7 @@ class NFFGToolBox(object):
     :return: single Bisbis representation
     :rtype: :any:`NFFG`
     """
-    sbb = NFFG(id="SingleBiSBiS-NFFG", name="Single-BiSBiS-View")
+    sbb = NFFG(id="SingleBiSBiS", name="Single-BiSBiS-View")
     if nffg is None:
       log.error("Missing global resource info! Skip OneBisBis generation!")
       return None
