@@ -1849,10 +1849,12 @@ class NodeInfra(Node):
   DEFAULT_DOMAIN = "VIRTUAL"
 
   def __init__ (self, id=None, name=None, domain=None, infra_type=None,
-                supported=None, res=None):
+                supported=None, res=None, mapping_features=None):
     """
     Init.
 
+    :param mapping_features: dict from features string to bool
+    :type mapping_features: dict
     :param domain: domain of the Infrastructure Node
     :type domain: str
     :param infra_type: type of the Infrastructure Node
@@ -1864,6 +1866,7 @@ class NodeInfra(Node):
     :return: None
     """
     super(NodeInfra, self).__init__(id=id, type=Node.INFRA, name=name)
+    self.mapping_features = mapping_features if mapping_features else {}
     self.domain = domain if domain is not None else self.DEFAULT_DOMAIN
     self.infra_type = infra_type if infra_type is not None else \
       self.TYPE_BISBIS
@@ -2008,6 +2011,8 @@ class NodeInfra(Node):
     res = self.resources.persist()
     if res:
       node["resources"] = res
+    if self.mapping_features:
+      node['mapping_features'] = self.mapping_features.copy()
     return node
 
   def load (self, data, *args, **kwargs):
@@ -2025,6 +2030,8 @@ class NodeInfra(Node):
       self.supported = data['supported']
     if 'resources' in data:
       self.resources.load(data['resources'])
+    if 'mapping_features' in data:
+      self.mapping_features = data['mapping_features']
     return self
 
   def __str__ (self):
