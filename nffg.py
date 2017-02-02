@@ -2408,6 +2408,55 @@ class NFFGToolBox(object):
     return minuend
 
   @classmethod
+  def _generate_del_nffg (cls, old, new):
+    """
+    Creates an NFFG with DEL mode in the new interpretation: all of the
+    elements in the NFFG are to be deleted, not regarding the structure. A
+    fake vnf may be added incase only edges should be deleted.
+
+    :param new:
+    :param old:
+    :return:
+    """
+    fake_port = None
+    for i, j, k, d in [tup for tup in
+                       old.network.edges_iter(data=True, keys=True)]:
+      if (i, j, k) not in new.network.edges_iter(keys=True):
+        if i not in new.network.nodes_iter():
+          if j in new.network.nodes_iter():
+            # then we can use i as placeholder for both end of the link
+            # add_edge rebinds to the given port objects
+            old.add_link(d.src, d.src, d)
+            old.del_edge(d.src, d.dst, d.id)
+          else:
+            # then both the link and the matching nodes will be deleted
+            pass
+        elif j not in new.network.nodes_iter():
+          if i in new.network.nodes_iter():
+            # then we can use j as a placeholder for both ends of the link
+            old.add_link(d.dst, d.dst, d)
+            old.del_edge(d.src, d.dst, d.id)
+          else:
+            # both the link and matching nodes will be deleted
+            pass
+        else:
+          # this link needs to be removed because it is not present in new,
+          # and present in old BUT both endpoints need to be kept. So lets
+          # add a fake VNF which can host both ends of all such links
+          if fake_port is None:
+            fake_port = old.add_sap(id='fake_sap_for_edge_deleting').add_port(
+              id=1)
+          old.add_link(fake_port, fake_port, d)
+          old.del_edge(d.src, d.dst, d.id)
+
+    for n, d in [tup for tup in old.network.nodes_iter(data=True)]:
+      if n in new.network.nodes_iter():
+        # it is present in both graphs, we need it deleted from DEL NFFG
+        old.del_node(d)
+
+    return old
+
+  @classmethod
   def generate_difference_of_nffgs (cls, old, new, ignore_infras=False):
     """
     Creates two NFFG objects which can be used in NFFG.MODE_ADD and
@@ -2431,8 +2480,7 @@ class NFFGToolBox(object):
     add_nffg = NFFGToolBox.subtract_nffg(add_nffg, old,
                                          consider_vnf_status=True,
                                          ignore_infras=ignore_infras)
-    del_nffg = NFFGToolBox.subtract_nffg(del_nffg, new,
-                                         ignore_infras=ignore_infras)
+    del_nffg = NFFGToolBox._generate_del_nffg(del_nffg, new)
     # WARNING: we always remove the EdgeReqs from the delete NFFG, this doesn't
     # have a defined meaning so far.
     for req in [r for r in del_nffg.reqs]:
