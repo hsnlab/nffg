@@ -592,6 +592,8 @@ class NFFG(AbstractNFFG):
       type = Link.DYNAMIC if dynamic else Link.STATIC
       link = EdgeLink(src=src_port, dst=dst_port, type=type, id=id,
                       backward=backward, delay=delay, bandwidth=bandwidth)
+    else:
+      link.src, link.dst = src_port, dst_port
     self.add_edge(src_port.node, dst_port.node, link)
     return link
 
