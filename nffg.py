@@ -2754,6 +2754,7 @@ def generate_test_NFFG ():
   infra = nffg.add_infra(id="infra1", name="Infra_node1", domain="TEST",
                          infra_type=NFFG.TYPE_INFRA_BISBIS, cpu=1, mem=2,
                          storage=3, delay=4, bandwidth=5)
+  infra.mapping_features['antiaffinity'] = True
   infra.add_supported_type("nf1")
   infra.add_supported_type("nf2")
   p_infra1 = infra.add_port(id=1)
