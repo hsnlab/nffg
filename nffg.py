@@ -2426,16 +2426,22 @@ class NFFGToolBox(object):
           if j in new.network.nodes_iter():
             # then we can use i as placeholder for both end of the link
             # add_edge rebinds to the given port objects
+            # WARNING add_link sets the port reference of 'd' when then the
+            # link obejct is given!
+            old_dst, old_src = d.dst, d.src
             old.add_link(d.src, d.src, d)
-            old.del_edge(d.src, d.dst, d.id)
+            old.del_edge(old_dst, old_src, d.id)
           else:
             # then both the link and the matching nodes will be deleted
             pass
         elif j not in new.network.nodes_iter():
           if i in new.network.nodes_iter():
             # then we can use j as a placeholder for both ends of the link
+            # WARNING add_link sets the port reference of 'd' when then the
+            # link obejct is given!
+            old_dst, old_src = d.dst, d.src
             old.add_link(d.dst, d.dst, d)
-            old.del_edge(d.src, d.dst, d.id)
+            old.del_edge(old_dst, old_src, d.id)
           else:
             # both the link and matching nodes will be deleted
             pass
@@ -2446,8 +2452,11 @@ class NFFGToolBox(object):
           if fake_port is None:
             fake_port = old.add_sap(id='fake_sap_for_edge_deleting').add_port(
               id=1)
+          # WARNING add_link sets the port reference of 'd' when then the
+          # link obejct is given!
+          old_dst, old_src = d.dst, d.src
           old.add_link(fake_port, fake_port, d)
-          old.del_edge(d.src, d.dst, d.id)
+          old.del_edge(old_dst, old_src, d.id)
 
     for n, d in [tup for tup in old.network.nodes_iter(data=True)]:
       if n in new.network.nodes_iter():
@@ -2507,7 +2516,6 @@ class NFFGToolBox(object):
   def _find_infra_link (nffg, port, outbound=True, accept_dyn=False):
     """
     Returns the object of a static link which is connected to 'port'.
-    If None is returned, we can suppose that the port is dynamic.
 
     :param nffg: NFFG object which contains port.
     :type nffg: :any:`NFFG`
@@ -2538,6 +2546,11 @@ class NFFGToolBox(object):
             raise RuntimeError("InfraPort %s has more than one inbound "
                                "links!" % port.id)
           link = d
+    if link is None:
+      raise Exception(
+        "No link could be found connected to port %s with the following "
+        "attributes: outbound: %s, can be DYNAMIC (if false only STATIC): %s"
+        % (port.id, outbound, accept_dyn))
     return link
 
   @staticmethod
