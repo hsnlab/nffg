@@ -985,6 +985,10 @@ class NFFG(AbstractNFFG):
             self.network.neighbors_iter(infra_id) if
             self.network.node[id].type == Node.NF)
 
+  def get_domain_of_nf (self, nf_id):
+    bb = [bb for bb in self.infra_neighbors(nf_id)]
+    return bb.pop().domain if len(bb) == 1 else None
+
   def clear_links (self, link_type):
     """
     Remove every specific Link from the NFFG defined by given ``type``.
@@ -1549,6 +1553,23 @@ class NFFGToolBox(object):
       cls.trim_orphaned_nodes(nffg=nffg_part, log=log)
     log.info("Splitting has been finished!")
     return splitted_parts
+
+  @classmethod
+  def split_nfs_by_domain (cls, nffg, nfs=None, log=logging.getLogger('SPLIT')):
+    if nfs is None:
+      nfs = [nfs.id for nfs in nffg.nfs]
+    log.debug("Splitting nfs: %s by domains..." % nfs)
+    domains = {}
+    for nf in nfs:
+      domain = nffg.get_domain_of_nf(nf_id=nf)
+      if not domain:
+        log.warning("Missing domain of nf: %s" % nf)
+        continue
+      if domain in domains:
+        domains[domain].append(nf)
+      else:
+        domains[domain] = [nf]
+    return domains
 
   @classmethod
   def recreate_missing_match_TAGs (cls, nffg, log=logging.getLogger("TAG")):
