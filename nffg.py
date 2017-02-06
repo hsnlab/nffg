@@ -2429,7 +2429,39 @@ class NFFGToolBox(object):
     return minuend
 
   @classmethod
-  def _generate_del_nffg (cls, old, new):
+  def _remove_saps_from_del_nffg (cls, nffg, fake_port):
+    """
+    Removes the SAP nodes from nffg and rebounds the connected links to the
+    other ends of of the links.
+    :param nffg:
+    :return:
+    """
+    for s in nffg.saps:
+      for edge_func in (nffg.network.out_edges,
+                        nffg.network.in_edges):
+        for _, _, k, d in edge_func([s.id], keys=True, data=True):
+          if d.dst.node.type == 'NF' or d.dst.node.type == 'INFRA':
+            old_dst, old_src = d.dst, d.src
+            nffg.add_link(d.dst, d.dst, d)
+            nffg.del_edge(old_dst, old_src, d.id)
+          elif d.src.node.type == 'NF' or d.src.node.type == 'INFRA':
+            old_dst, old_src = d.dst, d.src
+            nffg.add_link(d.src, d.src, d)
+            nffg.del_edge(old_dst, old_src, d.id)
+          else:
+            # meaning that both ends are SAPs
+            if fake_port is None:
+              fake_port = nffg.add_sap(id='fake_sap_for_edge_deleting').add_port(
+                id=1)
+            old_dst, old_src = d.dst, d.src
+            nffg.add_link(fake_port, fake_port, d)
+            nffg.del_edge(old_dst, old_src, d.id)
+
+    for s in [sap for sap in nffg.saps]:
+      nffg.del_node(s)
+
+  @classmethod
+  def _generate_del_nffg (cls, old, new, ignore_saps=True):
     """
     Creates an NFFG with DEL mode in the new interpretation: all of the
     elements in the NFFG are to be deleted, not regarding the structure. A
@@ -2483,6 +2515,9 @@ class NFFGToolBox(object):
       if n in new.network.nodes_iter():
         # it is present in both graphs, we need it deleted from DEL NFFG
         old.del_node(d)
+
+    if ignore_saps:
+      cls._remove_saps_from_del_nffg(old, fake_port)
 
     return old
 
