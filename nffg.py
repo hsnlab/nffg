@@ -2474,12 +2474,6 @@ class NFFGToolBox(object):
     :param old:
     :return:
     """
-    # remove all DYNAMIC links, they should be ignored during DEL NFFG
-    # generation.
-    for l in [link for link in old.links]:
-      if l.type == Link.DYNAMIC:
-        old.del_edge(l.dst, l.src, l.id)
-
     fake_port = None
     for i, j, k, d in [tup for tup in
                        old.network.edges_iter(data=True, keys=True)]:
