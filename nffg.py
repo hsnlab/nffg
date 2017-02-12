@@ -2437,30 +2437,27 @@ class NFFGToolBox(object):
     :return:
     """
     for s in nffg.saps:
-      if s.id != 'fake_sap_for_edge_deleting':
-        for edge_func in (nffg.network.out_edges,
-                          nffg.network.in_edges):
-          for _, _, k, d in edge_func([s.id], keys=True, data=True):
-            if d.dst.node.type == 'NF' or d.dst.node.type == 'INFRA':
-              old_dst, old_src = d.dst, d.src
-              nffg.add_link(d.dst, d.dst, d)
-              nffg.del_edge(old_dst, old_src, d.id)
-            elif d.src.node.type == 'NF' or d.src.node.type == 'INFRA':
-              old_dst, old_src = d.dst, d.src
-              nffg.add_link(d.src, d.src, d)
-              nffg.del_edge(old_dst, old_src, d.id)
-            else:
-              # meaning that both ends are SAPs
-              if fake_port is None:
-                fake_port = nffg.add_sap(
-                  id='fake_sap_for_edge_deleting').add_port(
-                  id=1)
-              old_dst, old_src = d.dst, d.src
-              nffg.add_link(fake_port, fake_port, d)
-              nffg.del_edge(old_dst, old_src, d.id)
+      for edge_func in (nffg.network.out_edges,
+                        nffg.network.in_edges):
+        for _, _, k, d in edge_func([s.id], keys=True, data=True):
+          if d.dst.node.type == 'NF' or d.dst.node.type == 'INFRA':
+            old_dst, old_src = d.dst, d.src
+            nffg.add_link(d.dst, d.dst, d)
+            nffg.del_edge(old_dst, old_src, d.id)
+          elif d.src.node.type == 'NF' or d.src.node.type == 'INFRA':
+            old_dst, old_src = d.dst, d.src
+            nffg.add_link(d.src, d.src, d)
+            nffg.del_edge(old_dst, old_src, d.id)
+          else:
+            # meaning that both ends are SAPs
+            if fake_port is None:
+              fake_port = nffg.add_sap(id='fake_sap_for_edge_deleting').add_port(
+                id=1)
+            old_dst, old_src = d.dst, d.src
+            nffg.add_link(fake_port, fake_port, d)
+            nffg.del_edge(old_dst, old_src, d.id)
 
-    for s in [sap for sap in nffg.saps if
-              sap.id != 'fake_sap_for_edge_deleting']:
+    for s in [sap for sap in nffg.saps]:
       nffg.del_node(s)
 
   @classmethod
