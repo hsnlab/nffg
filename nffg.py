@@ -1,4 +1,4 @@
-# Copyright 2015 Balazs Sonkoly, Janos Czentye
+# Copyright 2017 Janos Czentye, Balazs Nemeth, Balazs Sonkoly
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -2794,74 +2794,3 @@ class NFFGToolBox(object):
         #    sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
         #    NFFGToolBox._check_flow_consistencity(sg_map, sg_hop)
     return nffg
-
-
-def generate_test_NFFG ():
-  """
-  Test function that generates a test :any:`NFFG` object with filled fields.
-
-  :return: test NFFG
-  :rtype: :any:`NFFG`
-  """
-  nffg = NFFG()
-  nffg.service_id = "service123"
-  nffg.add_metadata(name="test_metadata1", value="abc")
-  nffg.add_metadata(name="test_metadata2", value="123")
-
-  nffg.mode = NFFG.MODE_ADD
-
-  sap = nffg.add_sap(id="sap1", name="SAP_node1", binding="eth1")
-  p_sap = sap.add_port(id=1, properties={"property1": "123"})
-  sap.add_metadata(name="sap_meta", value="123")
-
-  p_sap.sap = "SAP14"
-  p_sap.name = "portname_SAP14"
-  p_sap.capability = "cap1"
-  p_sap.technology = "sap_tech"
-  p_sap.delay = 2
-  p_sap.bandwidth = 3
-  p_sap.cost = 4
-  p_sap.controller = "sap_c"
-  p_sap.orchestrator = "sap_o"
-  p_sap.l2 = "l2"
-  p_sap.l4 = "l4"
-  p_sap.l3.add_l3address(id='l3_id', name="L3", configure=True, client="10",
-                         requested="R", provided="P")
-  p_sap.add_metadata("meta1", "metavalue")
-
-  nf = nffg.add_nf(id="nf1", name="NF1", func_type="nf1", dep_type="xxx", cpu=1,
-                   mem=2, storage=3, delay=4, bandwidth=5)
-  nf.add_metadata(name="meta1", value="123")
-  p_nf = nf.add_port(id=1)
-  infra = nffg.add_infra(id="infra1", name="Infra_node1", domain="TEST",
-                         infra_type=NFFG.TYPE_INFRA_BISBIS, cpu=1, mem=2,
-                         storage=3, delay=4, bandwidth=5)
-  infra.mapping_features['antiaffinity'] = True
-  infra.add_supported_type("nf1")
-  infra.add_supported_type("nf2")
-  p_infra1 = infra.add_port(id=1)
-  p_infra2 = infra.add_port(id="infra1|nf1|1")
-  p_infra1.add_flowrule(match="in_port=1;TAG=sap1|nf1|1",
-                        action="output=infra1|nf1|1;UNTAG", delay=1,
-                        bandwidth=2)
-  nffg.add_undirected_link(port1=p_sap, port2=p_infra1, delay=1, bandwidth=2)
-  nffg.add_link(src_port=p_infra2, dst_port=p_nf, id="l1", dynamic=True,
-                backward=False, delay=1, bandwidth=2)
-  nffg.add_link(src_port=p_nf, dst_port=p_infra2, id="l2", dynamic=True,
-                backward=True, delay=1, bandwidth=2)
-  nffg.add_sglink(src_port=p_sap, dst_port=p_nf, id="sg1",
-                  flowclass="dl_type:0x0800", tag_info="", delay=1, bandwidth=2)
-  nffg.add_req(src_port=p_sap, dst_port=p_nf, id="req1", delay=1, bandwidth=2,
-               sg_path=["sg1"])
-  return nffg
-
-
-if __name__ == "__main__":
-  logging.basicConfig(level=logging.DEBUG)
-  raw = generate_test_NFFG().dump()
-  print raw
-  parsed = NFFG.parse(raw_data=raw)
-  parsed.mode = NFFG.MODE_REMAP
-  print parsed.dump()
-  # nffg = NFFG.parse_from_file('op-add-mapped-topo1.nffg')
-  # print nffg.dump()
