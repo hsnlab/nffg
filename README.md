@@ -16,6 +16,36 @@ Installation of dependencies on a Debian-based OS:
 $ sudo apt update && sudo apt install python-pip
 $ sudo -H pip install networkx
 ```
+### Optional
+To install nffg_lib globally, use the following command in the project root:
+
+```bash
+$ sudo -H pip install --upgrade .
+```
+
+### Usage
+
+Import main classes in interpreter of Python script:
+
+```python
+from nffg import *
+```
+
+A helper script is also installed globally for calculating differences of two NFFG file:
+
+```bash
+$ nffg_diff.py -h
+usage: nffg_diff.py [-h] old new
+
+Calculate differences of NFFGs
+
+positional arguments:
+  old         path for old NFFG
+  new         path for new NFFG
+
+optional arguments:
+  -h, --help  show this help message and exit
+```
 
 ## License
 

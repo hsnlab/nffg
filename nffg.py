@@ -28,7 +28,7 @@ from networkx.exception import NetworkXError
 
 from nffg_elements import *
 
-__version__ = "1.0"
+VERSION = "1.0"
 
 
 class AbstractNFFG(object):
@@ -195,10 +195,10 @@ class NFFG(AbstractNFFG):
   # Mapping process status
   MAP_STATUS_SKIPPED = "SKIPPED"  # mark NFFG as skipped for ESCAPE
 
-  version = __version__
+  version = VERSION
 
   def __init__ (self, id=None, name=None, service_id=None, mode=None,
-                metadata=None, status=None, version=__version__):
+                metadata=None, status=None, version=VERSION):
     """
     Init.
 

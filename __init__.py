@@ -16,5 +16,5 @@ Internal graph-based implementation of Network Function Forwarding Graph
 """
 from nffg import NFFG, NFFGToolBox
 
-__version__ = nffg.__version__
+__version__ = nffg.VERSION
 __all__ = ["NFFG", "NFFGToolBox"]
