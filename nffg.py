@@ -2458,9 +2458,19 @@ class NFFGToolBox(object):
     # have a defined meaning so far.
     for req in [r for r in del_nffg.reqs]:
       del_nffg.del_edge(req.src, req.dst, req.id)
-    for n, d in [t for t in del_nffg.network.nodes(data=True)]:
-      if del_nffg.network.out_degree(n) + del_nffg.network.in_degree(n) == 0:
-        del_nffg.del_node(d)
+
+    # NOTE: It should be possible to delete an NF, which is not connected
+    # anywhere. With setting and using the operation field of NFs, NFs with
+    # no connected SGhops are possible.
+    # for n, d in [t for t in del_nffg.network.nodes(data=True)]:
+    #   if del_nffg.network.out_degree(n) + del_nffg.network.in_degree(n) == 0:
+    #     del_nffg.del_node(d)
+    # NOTE: set operation delete to filter removing NFs which wouldn't have
+    # left any more connected SGHops.
+    for del_nf in del_nffg.nfs:
+      if del_nf.id not in old.network.nodes_iter():
+        del_nf.operation = NFFG.OP_DELETE
+
     # The output ADD NFFG shall still include the Infras even if they were 
     # ignored during the difference calculation.
 
