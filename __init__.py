@@ -1,4 +1,4 @@
-# Copyright 2016 Janos Czentye <czentye@tmit.bme.hu>
+# Copyright 2017 Janos Czentye, Balazs Nemeth, Balazs Sonkoly
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,3 +14,7 @@
 """
 Internal graph-based implementation of Network Function Forwarding Graph
 """
+from nffg import NFFG, NFFGToolBox
+
+__version__ = nffg.VERSION
+__all__ = ["NFFG", "NFFGToolBox"]

@@ -1,0 +1,4 @@
+include README.md
+global-exclude *.in
+exclude setup.py
+exclude nffg_tests.py

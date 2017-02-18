@@ -1,4 +1,4 @@
-# Copyright 2015 Balazs Sonkoly, Janos Czentye
+# Copyright 2017 Janos Czentye, Balazs Nemeth, Balazs Sonkoly
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Classes for handling the elements of the NF-FG data structure
+Classes for handling the elements of the NF-FG data structure.
 """
 import json
 import uuid
