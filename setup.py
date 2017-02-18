@@ -1,7 +1,4 @@
-# Copyright 2017 Janos Czentye, Balazs Nemeth, Balazs Son
-#
-#
-# koly
+# Copyright 2017 Janos Czentye, Balazs Nemeth, Balazs Sonkoly
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +15,9 @@ from setuptools import setup
 
 from nffg import VERSION
 
-setup(name="nffg",
+MODULE_NAME = "nffg"
+
+setup(name=MODULE_NAME,
       version=VERSION,
       description="Network Function Forwarding Graph",
       author="Janos Czentye, Balazs Nemeth, Balazs Sonkoly",
@@ -40,9 +39,8 @@ setup(name="nffg",
       install_requires=[
         "networkx>=1.11"
       ],
-      # package_dir={"fake_pkg_dir": "."},
-      package_dir={"nffg": "."},
-      packages=["nffg"],
+      package_dir={MODULE_NAME: "."},
+      packages=[MODULE_NAME],
       scripts=["nffg_diff.py"],
       include_package_data=True,
       zip_safe=False)
