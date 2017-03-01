@@ -2468,10 +2468,11 @@ class NFFGToolBox(object):
     # NOTE: set operation delete to filter removing NFs which wouldn't have
     # left any more connected SGHops.
     for del_nf in del_nffg.nfs:
-      if del_nf.id not in old.network.nodes_iter():
+      if del_nf.id in old.network.nodes_iter() and \
+            del_nf.id not in new.network.nodes_iter():
         del_nf.operation = NFFG.OP_DELETE
 
-    # The output ADD NFFG shall still include the Infras even if they were 
+    # The output ADD NFFG shall still include the Infras even if they were
     # ignored during the difference calculation.
 
     # Copy data from new NFFG to old NFFG
