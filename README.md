@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Python-based implementation of Network Function Forwarding Graph used by ESCAPE.
+Python-based implementation of Network Function Forwarding Graph (NF-FG) used by ESCAPE.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ $ sudo apt update && sudo apt install python-pip
 $ sudo -H pip install networkx
 ```
 ### Optional
-To install nffg_lib globally, use the following command in the project root:
+To install the nffg files globally, use the following command in the project root:
 
 ```bash
 $ sudo -H pip install --upgrade .
@@ -25,15 +25,15 @@ $ sudo -H pip install --upgrade .
 
 ### Usage
 
-Import main classes in interpreter of Python script:
+Import main classes into a Python script:
 
 ```python
 from nffg import *
 ```
 
-A helper script is also installed globally for calculating differences of two NFFG file:
+A helper script is also installed globally for calculating ADD and DEL differences of two NFFG file:
 
-```bash
+```
 $ nffg_diff.py -h
 usage: nffg_diff.py [-h] old new
 
@@ -52,6 +52,6 @@ optional arguments:
 Licensed under the Apache License, Version 2.0; see LICENSE file.
 
     Copyright (C) 2017 by
-    Janos Czentye <janos.czentye@tmit.bme.hu>
-    Balazs Nemeth <balazs.nemeth@tmit.bme.hu>
-    Balazs Sonkoly <balazs.sonkoly@tmit.bme.hu>
+    János Czentye <janos.czentye@tmit.bme.hu>
+    Balázs Németh <balazs.nemeth@tmit.bme.hu>
+    Balázs Sonkoly <balazs.sonkoly@tmit.bme.hu>
