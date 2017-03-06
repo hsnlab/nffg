@@ -22,10 +22,10 @@ from nffg import NFFGToolBox, NFFG
 
 def _calculate_diffs (old_path, new_path):
   """
-  Calculate and print the difference of the two :any:`NFFG` given by it"s path.
+  Calculate and print the difference of the two :class:`NFFG` given by it"s path.
 
-  :param old_path: file path of the original :any:`NFFG`
-  :param new_path: file path of the modified :any:`NFFG`
+  :param old_path: file path of the original :class:`NFFG`
+  :param new_path: file path of the modified :class:`NFFG`
   :return: None
   """
   print "Calculate the difference NFFGs..."

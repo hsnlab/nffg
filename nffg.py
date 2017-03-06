@@ -691,8 +691,8 @@ class NFFG(AbstractNFFG):
     :type name: str
     :param value: metadata value
     :type value: str
-    :return: the :any:`NFFG` object to allow function chaining
-    :rtype: :any:`NFFG`
+    :return: the :class:`NFFG` object to allow function chaining
+    :rtype: :class:`NFFG`
     """
     self.metadata[name] = value
     return self
@@ -710,7 +710,7 @@ class NFFG(AbstractNFFG):
 
   def del_metadata (self, name):
     """
-    Remove the metadata from the :any:`NFFG`. If no metadata is given all the
+    Remove the metadata from the :class:`NFFG`. If no metadata is given all the
     metadata will be removed.
 
     :param name: name of the metadata
@@ -769,12 +769,12 @@ class NFFG(AbstractNFFG):
   def parse (cls, raw_data):
     """
     Read the given JSON object structure and try to convert to an NF-FG
-    representation as an :any:`NFFG`
+    representation as an :class:`NFFG`
 
     :param raw_data: raw NF-FG description as a string
     :type raw_data: str
     :return: the parsed NF-FG representation
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     # Parse text
     model = NFFGModel.parse(raw_data)
@@ -812,7 +812,7 @@ class NFFG(AbstractNFFG):
     :param path: file path
     :type path: str
     :return: the parsed NF-FG representation
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     with open(path) as f:
       return NFFG.parse(f.read())
@@ -825,7 +825,7 @@ class NFFG(AbstractNFFG):
     """
     Return True if the NFFG contains no Node.
 
-    :return: :any:`NFFG` object is empty or not
+    :return: :class:`NFFG` object is empty or not
     :rtype: bool
     """
     return len(self.network) == 0
@@ -916,7 +916,7 @@ class NFFG(AbstractNFFG):
     STATIC links: infra-infra, infra-sap
 
     :return: NF-FG with the duplicated links for function chaining
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     # Create backward links
     backwards = [EdgeLink(src=link.dst, dst=link.src, id=str(link.id) + "-back",
@@ -938,7 +938,7 @@ class NFFG(AbstractNFFG):
     Only leaves one of the links, but that's not defined which one.
 
     :return: NF-FG with the filtered links for function chaining
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     # Collect backward links
     backwards = [(src, dst, key) for src, dst, key, link in
@@ -955,7 +955,7 @@ class NFFG(AbstractNFFG):
     Returns a list with the outbound or inbound SGHops from an NF.
 
     :param nf_id: nf node id
-    :type nf_id: :any:`NodeNf`
+    :type nf_id: :class:`NodeNf`
     :return: list
     """
     return [sg for sg in self.sg_hops if sg.src.node.id == nf_id or \
@@ -993,7 +993,7 @@ class NFFG(AbstractNFFG):
     """
     Remove every specific Link from the NFFG defined by given ``type``.
 
-    :param link_type: link type defined in :any:`NFFG`
+    :param link_type: link type defined in :class:`NFFG`
     :type link_type: str
     :return: None
     """
@@ -1005,7 +1005,7 @@ class NFFG(AbstractNFFG):
     """
     Remove every specific Node from the NFFG defined by given ``type``.
 
-    :param node_type: node type defined in :any:`NFFG`
+    :param node_type: node type defined in :class:`NFFG`
     :type node_type: str
     :return: None
     """
@@ -1018,7 +1018,7 @@ class NFFG(AbstractNFFG):
     Return the deep copy of the NFFG object.
 
     :return: deep copy
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     copy = NFFG(id=self.id, name=self.name, version=self.version,
                 mode=self.mode, metadata=self.metadata.copy(),
@@ -1144,7 +1144,7 @@ class NFFGToolBox(object):
     Return with the set of detected domains in the given ``nffg``.
 
     :param nffg: observed NFFG
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :return: set of the detected domains
     :rtype: set
     """
@@ -1157,11 +1157,11 @@ class NFFGToolBox(object):
     recreate associated SAPs.
 
     :param nffg: observed NFFG
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: modified NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     for infra in nffg.infras:
       for port in infra.ports:
@@ -1225,14 +1225,14 @@ class NFFGToolBox(object):
   @staticmethod
   def trim_orphaned_nodes (nffg, log=logging.getLogger("TRIM")):
     """
-    Remove orphaned nodes from given :any:`NFFG`.
+    Remove orphaned nodes from given :class:`NFFG`.
 
     :param nffg: observed NFFG
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: trimmed NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     detected = set()
     for u, v, link in nffg.network.edges_iter(data=True):
@@ -1253,13 +1253,13 @@ class NFFGToolBox(object):
     Merge the given ``nffg`` into the ``base`` NFFG using the given domain name.
 
     :param base: base NFFG object
-    :type base: :any:`NFFG`
+    :type base: :class:`NFFG`
     :param nffg: updating information
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: the update base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     # Get new domain name
     domain = cls.detect_domains(nffg=nffg)
@@ -1451,20 +1451,20 @@ class NFFGToolBox(object):
   @staticmethod
   def strip_domain (nffg, domain, log=logging.getLogger("STRIP")):
     """
-    Trim the given :any:`NFFG` and leave only the nodes belong to the given
+    Trim the given :class:`NFFG` and leave only the nodes belong to the given
     ``domain``.
 
     ..warning::
       No inter-domain SAP recreation will be performed after the trim!
 
     :param nffg: mapped NFFG object
-    :type nffg: NFFG
+    :type nffg: :class:`NFFG`
     :param domain: extracted domain name
     :type domain: str
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: stripped NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     log.info("Strip domain in %s" % nffg)
     nffg = nffg.copy()
@@ -1489,11 +1489,11 @@ class NFFGToolBox(object):
   @classmethod
   def split_into_domains (cls, nffg, log=logging.getLogger("SPLIT")):
     """
-    Split given :any:`NFFG` into separate parts self._global_nffg on
+    Split given :class:`NFFG` into separate parts self._global_nffg on
     original domains.
 
     :param nffg: mapped NFFG object
-    :type nffg: NFFG
+    :type nffg: :class:NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: sliced parts as a list of (domain_name, nffg_part) tuples
@@ -1582,7 +1582,7 @@ class NFFGToolBox(object):
     created without tags because collocated links do not use tags by default.
 
     :param nffg: mapped NFFG object
-    :type nffg: NFFG
+    :type nffg: :any:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: None
@@ -1635,7 +1635,7 @@ class NFFGToolBox(object):
     specific ones based on the information retrieved from inter-domain
     SAPs.
 
-    :param slices: list of mapped :any:`NFFG` instances
+    :param slices: list of mapped :class:`NFFG` instances
     :type slices: list
     :param log: additional logger
     :type log: :any:`logging.Logger`
@@ -1733,11 +1733,11 @@ class NFFGToolBox(object):
     inter-domain SAPs rebind the link as an e2e requirement link.
 
     :param nffg: splitted NFFG object
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: rebounded NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     log.debug(
       "Search for requirement link fragments to rebind as e2e requirement...")
@@ -1816,13 +1816,13 @@ class NFFGToolBox(object):
     representation with calculated resources and transferred NF and SAP nodes.
 
     :param nffg: global resource
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param add_sg_hops: recreate SG hop links also (default: False)
     :type add_sg_hops: bool
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: single Bisbis representation
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     sbb = NFFG(id="SingleBiSBiS", name="Single-BiSBiS-View")
     if nffg is None:
@@ -2008,13 +2008,13 @@ class NFFGToolBox(object):
     nodes of the given domain
 
     :param base: base NFFG object
-    :type base: :any:`NFFG`
+    :type base: :class:`NFFG`
     :param domain: domain name
     :type domain: str
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: the update base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     base_domain = cls.detect_domains(nffg=base)
     if domain not in base_domain:
@@ -2053,17 +2053,17 @@ class NFFGToolBox(object):
   @classmethod
   def remove_domain (cls, base, domain, log=logging.getLogger("REMOVE")):
     """
-    Remove elements from the given ``base`` :any:`NFFG` with given ``domain``
+    Remove elements from the given ``base`` :class:`NFFG` with given ``domain``
     name.
 
     :param base: base NFFG object
-    :type base: :any:`NFFG`
+    :type base: :class:`NFFG`
     :param domain: domain name
     :type domain: str
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: the update base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     log.debug("Remove nodes and edges which part of the domain: %s from %s..."
               % (domain, base))
@@ -2103,13 +2103,13 @@ class NFFGToolBox(object):
     Update the given ``updated`` nffg into the ``base`` NFFG.
 
     :param base: base NFFG object
-    :type base: :any:`NFFG`
+    :type base: :class:`NFFG`
     :param updated: updated domain information
-    :type updated: :any:`NFFG`
+    :type updated: :class:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: the update base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     # Get new domain name
     domain = cls.detect_domains(nffg=updated)
@@ -2141,13 +2141,13 @@ class NFFGToolBox(object):
     Update the mapped elements of given nffg with given status.
 
     :param nffg: base NFFG object
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param status: new status
     :type status: str
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: the update base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     log.debug("Add %s status for NFs and Flowrules..." % status)
     for nf in nffg.nfs:
@@ -2165,13 +2165,13 @@ class NFFGToolBox(object):
     given ``updated`` nffg.
 
     :param base: base NFFG object
-    :type base: :any:`NFFG`
+    :type base: :class:`NFFG`
     :param updated: updated domain information
-    :type updated: :any:`NFFG`
+    :type updated: :class:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: the update base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     # Update NF status
     base_nfs = {nf.id for nf in base.nfs}
@@ -2228,14 +2228,14 @@ class NFFGToolBox(object):
     given ``updated`` nffg.
 
     :param nffg: base NFFG object
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param dov: updated domain information
-    :type dov: :any:`NFFG`
+    :type dov: :class:`NFFG`
     :type init_status: init status of new element
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: the update base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     # Update NF status
     nffg_nfs = {nf.id for nf in nffg.nfs}
@@ -2275,7 +2275,7 @@ class NFFGToolBox(object):
     stopped/failed Nfs.
 
     :param nffg: base NFFG object
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: None
@@ -2289,11 +2289,11 @@ class NFFGToolBox(object):
     Remove all the installed NFs, flowrules and dynamic ports from given NFFG.
 
     :param nffg: base NFFG
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: the cleaned nffg
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     for infra in nffg.infras:
       log.debug("Remove deployed elements from Infra: %s" % infra.id)
@@ -2332,7 +2332,7 @@ class NFFGToolBox(object):
     :param target: The target NFFG
     :type target: :any: `NFFG`
     :return: the updated base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     for obj in type_iter:
       if obj.id not in target:
@@ -2355,11 +2355,11 @@ class NFFGToolBox(object):
     requirements are kept unchanged in target.
 
     :param target: target NFFG object
-    :type target: :any:`NFFG`
+    :type target: :class:`NFFG`
     :param new: NFFG object to merge from
-    :type new: :any:`NFFG`
+    :type new: :class:`NFFG`
     :return: the updated base NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     # Copy Infras
     target = cls._copy_node_type(new.infras, target, log)
@@ -2391,11 +2391,11 @@ class NFFGToolBox(object):
     removed.
 
     :param minuend: minuend NFFG object
-    :type minuend: :any:`NFFG`
+    :type minuend: :class:`NFFG`
     :param subtrahend: NFFG object to be subtracted
-    :type subtrahend: :any:`NFFG`
+    :type subtrahend: :class:`NFFG`
     :return: NFFG which is minuend \ subtrahend
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     if ignore_infras:
       minuend_degrees = {}
@@ -2439,9 +2439,9 @@ class NFFGToolBox(object):
     the input.
 
     :param old: old NFFG object
-    :type old: :any:`NFFG`
+    :type old: :class:`NFFG`
     :param new: NFFG object of the new config
-    :type new: :any:`NFFG`
+    :type new: :class:`NFFG`
     :return: a tuple of NFFG-s for addition and deletion resp. on old config.
     :rtype: tuple
     """
@@ -2494,7 +2494,7 @@ class NFFGToolBox(object):
     If None is returned, we can suppose that the port is dynamic.
 
     :param nffg: NFFG object which contains port.
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param port: The port which should be the source or destination.
     :type port: :any:`Port`
     :param outbound: Determines whether outbound or inbound link should be found
@@ -2657,7 +2657,7 @@ class NFFGToolBox(object):
     SGHops are not added.
 
     :param nffg: the processed NFFG object
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :param return_paths: flag for returning paths
     :type returning: bool
     :return: extracted values
@@ -2728,9 +2728,9 @@ class NFFGToolBox(object):
     objects in the NFFG.
 
     :param nffg: the NFFG to look for SGHop info and to modify
-    :type nffg: :any:`NFFG`
+    :type nffg: :class:`NFFG`
     :return: the modified NFFG
-    :rtype: :any:`NFFG`
+    :rtype: :class:`NFFG`
     """
     sg_map = NFFGToolBox.get_all_sghop_info(nffg)
     for sg_hop_id, data in sg_map.iteritems():
