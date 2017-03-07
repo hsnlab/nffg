@@ -2348,6 +2348,33 @@ class NFFGToolBox(object):
     return target
 
   @classmethod
+  def _copy_node_type_with_flowrules (cls, type_iter, target, log):
+    """
+    Copies all element from iterator if it is not in target, and merges their
+    port lists.
+
+    :param type_iter: Iterator on objects to be added
+    :type type_iter: :any: iterator on `Node`
+    :param target: The target NFFG
+    :type target: :any: `NFFG`
+    :return: the updated base NFFG
+    :rtype: :class:`NFFG`
+    """
+    for obj in type_iter:
+      if obj.id not in target:
+        c_obj = target.add_node(deepcopy(obj))
+        log.debug("Copy NFFG node: %s" % c_obj)
+      else:
+        for p in obj.ports:
+          if p not in target.network.node[obj.id].ports:
+            new_port = target.network.node[obj.id].add_port(id=p.id,
+                                                 properties=p.properties)
+            if hasattr(p, 'flowrules'):
+              setattr(new_port, 'flowrules', copy.deepcopy(p.flowrules))
+            log.debug("Copy port %s to NFFG element %s" % (p, obj))
+    return target
+
+  @classmethod
   def merge_nffgs (cls, target, new, log=logging.getLogger("UNION")):
     """
     Merges new `NFFG` to target `NFFG` keeping all parameters and copying
@@ -2362,7 +2389,7 @@ class NFFGToolBox(object):
     :rtype: :class:`NFFG`
     """
     # Copy Infras
-    target = cls._copy_node_type(new.infras, target, log)
+    target = cls._copy_node_type_with_flowrules(new.infras, target, log)
     # Copy NFs
     target = cls._copy_node_type(new.nfs, target, log)
     # Copy SAPs
