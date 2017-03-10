@@ -1835,7 +1835,6 @@ class NFFGToolBox(object):
                               name="SingleBiSBiS",
                               domain=NFFG.DEFAULT_DOMAIN,
                               infra_type=NFFG.TYPE_INFRA_BISBIS)
-    log.debug("Added Infra BiSBiS: %s" % sbb_infra)
     # Compute and add resources
     # Sum of available CPU
     try:
@@ -1890,10 +1889,13 @@ class NFFGToolBox(object):
       s_types = s_types.union(infra.supported)
     sbb_infra.add_supported_type(s_types)
     log.debug("Added supported types: %s" % s_types)
+    log.debug("Added Infra BiSBiS: %s" % sbb_infra)
+    log.log(5, "SBB:\n%s" % sbb_infra.dump())
     # Add existing NFs
     for nf in nffg.nfs:
       c_nf = sbb.add_nf(nf=nf.copy())
       log.debug("Added NF: %s" % c_nf)
+      log.log(5, "NF:\n%s" % nf.dump())
       # Discover and add NF connections
       for u, v, l in nffg.real_out_edges_iter(nf.id):
         if l.type != NFFG.TYPE_LINK_DYNAMIC:
@@ -1913,6 +1915,7 @@ class NFFGToolBox(object):
     for sap in nffg.saps:
       c_sap = sbb.add_sap(sap_obj=sap.copy())
       log.debug("Added SAP: %s" % c_sap)
+      log.log(5, "SAP:\n%s" % c_sap.dump())
       # Discover and add SAP connections
       for u, v, l in nffg.real_out_edges_iter(sap.id):
         # Explicitly add links for both direction

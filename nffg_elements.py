@@ -158,6 +158,15 @@ class Element(Persistable):
     from copy import deepcopy
     return deepcopy(self)
 
+  def dump (self):
+    """
+    Dump the Element in a pretty format for debugging.
+
+    :return: Element in JSON format
+    :rtype: str
+    """
+    return json.dumps(self.persist(), indent=2, sort_keys=False)
+
   ##############################################################################
   # dict specific functions
   ##############################################################################
