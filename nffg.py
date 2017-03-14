@@ -2372,9 +2372,13 @@ class NFFGToolBox(object):
           if p not in target.network.node[obj.id].ports:
             new_port = target.network.node[obj.id].add_port(id=p.id,
                                                  properties=p.properties)
-            if hasattr(p, 'flowrules'):
-              setattr(new_port, 'flowrules', copy.deepcopy(p.flowrules))
             log.debug("Copy port %s to NFFG element %s" % (p, obj))
+            if hasattr(p, 'flowrules'):
+              log.debug("Merging flowrules of port %s of node %s"%
+                        (p.id, obj.id))
+              for fr in p.flowrules:
+                if fr.id not in (f.id for f in new_port.flowrules):
+                  new_port.flowrules.append(copy.deepcopy(fr))
     return target
 
   @classmethod
