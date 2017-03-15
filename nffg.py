@@ -1824,12 +1824,13 @@ class NFFGToolBox(object):
     :return: single Bisbis representation
     :rtype: :class:`NFFG`
     """
-    sbb = NFFG(id="SingleBiSBiS", name="Single-BiSBiS-View")
     if nffg is None:
       log.error("Missing global resource info! Skip OneBisBis generation!")
       return None
     # Create Single BiSBiS NFFG
     log.debug("Generate trivial SingleBiSBiS NFFG based on %s:" % nffg)
+    log.debug("START SBB generation...")
+    sbb = NFFG(id="SingleBiSBiS", name="Single-BiSBiS-View")
     # Create the single BiSBiS infra
     sbb_infra = sbb.add_infra(id="SingleBiSBiS",
                               name="SingleBiSBiS",
@@ -1996,7 +1997,7 @@ class NFFGToolBox(object):
         log.debug("Added SG hop: %s" % sg)
     else:
       log.debug("Skip SG hop recreation for the SingleBiSBiS!")
-    log.debug("SingleBiSBiS generation has been finished!")
+    log.debug("END SBB generation...")
     # Return with Single BiSBiS infra
     return sbb
 
