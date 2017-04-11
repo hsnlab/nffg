@@ -1919,10 +1919,13 @@ class NFFGToolBox(object):
       log.log(5, "SAP:\n%s" % c_sap.dump())
       # Discover and add SAP connections
       for u, v, l in nffg.real_out_edges_iter(sap.id):
+        if len(sap.ports) > 1:
+          log.warning("SAP contains multiple port!")
+        sbb_infra_port = sbb_infra.add_port(id="port-%s" % c_sap.id,
+                                            sap=sap.ports.container[0].sap)
         # Explicitly add links for both direction
         link1, link2 = sbb.add_undirected_link(port1=c_sap.ports[l.src.id],
-                                               port2=sbb_infra.add_port(
-                                                 "port-%s" % c_sap.id),
+                                               port2=sbb_infra_port,
                                                p1p2id=l.id,
                                                p2p1id="%s-back" % l.id,
                                                delay=l.delay,
@@ -2372,10 +2375,10 @@ class NFFGToolBox(object):
         for p in obj.ports:
           if p not in target.network.node[obj.id].ports:
             new_port = target.network.node[obj.id].add_port(id=p.id,
-                                                 properties=p.properties)
+                                                            properties=p.properties)
             log.debug("Copy port %s to NFFG element %s" % (p, obj))
             if hasattr(p, 'flowrules'):
-              log.debug("Merging flowrules of port %s of node %s"%
+              log.debug("Merging flowrules of port %s of node %s" %
                         (p.id, obj.id))
               for fr in p.flowrules:
                 if fr.id not in (f.id for f in new_port.flowrules):
