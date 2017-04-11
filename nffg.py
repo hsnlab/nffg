@@ -1921,7 +1921,7 @@ class NFFGToolBox(object):
       for u, v, l in nffg.real_out_edges_iter(sap.id):
         if len(sap.ports) > 1:
           log.warning("SAP contains multiple port!")
-        sbb_infra_port = sbb_infra.add_port(id="port-%s" % c_sap.id,
+        sbb_infra_port = sbb_infra.add_port(id=str(c_sap.id),
                                             sap=sap.ports.container[0].sap)
         # Explicitly add links for both direction
         link1, link2 = sbb.add_undirected_link(port1=c_sap.ports[l.src.id],
