@@ -2000,6 +2000,7 @@ class NFFGToolBox(object):
         log.debug("Added SG hop: %s" % sg)
     else:
       log.debug("Skip SG hop recreation for the SingleBiSBiS!")
+    NFFGToolBox.rewrite_interdomain_tags([(sbb.id, sbb)])
     log.debug("END SBB generation...")
     # Return with Single BiSBiS infra
     return sbb
