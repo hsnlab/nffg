@@ -2365,7 +2365,7 @@ class NFFGToolBox(object):
         log.debug("Copy NFFG node: %s" % c_obj)
       else:
         for p in obj.ports:
-          if p not in target.network.node[obj.id].ports:
+          if p.id not in target.network.node[obj.id].ports:
             target.network.node[obj.id].add_port(id=p.id,
                                                  properties=p.properties)
             # TODO: Flowrules are not copied!
@@ -2391,7 +2391,7 @@ class NFFGToolBox(object):
         log.debug("Copy NFFG node: %s" % c_obj)
       else:
         for p in obj.ports:
-          if p not in target.network.node[obj.id].ports:
+          if p.id not in target.network.node[obj.id].ports:
             new_port = target.network.node[obj.id].add_port(id=p.id,
                                                             properties=p.properties)
             log.debug("Copy port %s to NFFG element %s" % (p, obj))
@@ -2401,6 +2401,11 @@ class NFFGToolBox(object):
               for fr in p.flowrules:
                 if fr.id not in (f.id for f in new_port.flowrules):
                   new_port.flowrules.append(copy.deepcopy(fr))
+          else:
+            old_port = target.network.node[obj.id].ports[p.id]
+            for fr in p.flowrules:
+              if fr.id not in (f.id for f in old_port.flowrules):
+                old_port.flowrules.append(copy.deepcopy(fr))
     return target
 
   @classmethod
@@ -2578,6 +2583,11 @@ class NFFGToolBox(object):
             raise RuntimeError("InfraPort %s has more than one inbound "
                                "links!" % port.id)
           link = d
+    if link == None:
+      raise RuntimeError(" ".join(("Dynamic" if accept_dyn else "Static",
+                                   "outbound" if outbound else "inbound",
+                                   "link couldnt be found connected to port",
+                                   str(port))))
     return link
 
   @staticmethod
