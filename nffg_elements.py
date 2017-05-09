@@ -815,7 +815,8 @@ class PortContainer(Persistable):
     for port in self.container:
       if port.id == id:
         return port
-    raise KeyError("Port with id: %s is not defined!" % id)
+    raise KeyError("Port with id: %s is not defined in: %s!"
+                   % (id, [p.id for p in self.container]))
 
   def __iter__ (self):
     """
@@ -2249,7 +2250,7 @@ class EdgeSGLink(Link):
     :return: string representation
     :rtype: str
     """
-    return "SGLink(id: %s, src: %s[%s], dst: %s[%s], tag: %s, delay:%s, " \
+    return "SGLink(id: %s, src: %s[%s], dst: %s[%s], tag: %s, delay: %s, " \
            "bandwidth: %s)" % (
              self.id, self.src.node.id, self.src.id, self.dst.node.id,
              self.dst.id, self.tag_info, self.delay, self.bandwidth)
