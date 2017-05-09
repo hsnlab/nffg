@@ -1648,9 +1648,13 @@ class NFFGToolBox(object):
       # collect SAP ports of infra nodes
       sap_ports = []
       for sap in nffg[1].saps:
-        sap_switch_links = [e for e in
+        sap_switch_links = [(u, v, link) for u, v, link in
                             nffg[1].network.edges_iter(data=True) if
-                            sap.id in e]
+                            sap.id in (u, v) and
+                            link.type == NFFG.TYPE_LINK_STATIC]
+        # sap_switch_links = [e for e in
+        #                     nffg[1].network.edges_iter(data=True) if
+        #                     sap.id in e]
         # list of e = (u, v, data)
         try:
           if sap_switch_links[0][0] == sap.id:
@@ -1661,6 +1665,7 @@ class NFFGToolBox(object):
           log.error(
             "Link for SAP: %s is not found." % sap)
           continue
+      log.debug("SAP_PORTS: %s" % sap_ports)
       for infra in nffg[1].infras:
         # log.debug("Processing infra %s" % infra)
         for flowrule in infra.flowrules():
@@ -1671,7 +1676,8 @@ class NFFGToolBox(object):
                                flowrule.match)
               if str(in_port) == str(sap_port.id):
                 # found inbound rule
-                log.debug("Found inbound flowrule: %s" % flowrule)
+                log.debug("Found inbound flowrule (%s):\n %s"
+                          % (flowrule.id, flowrule))
                 if sap_port.sap is not None:
                   log.debug("Found inter-domain SAP port: %s, %s" %
                             (sap_port, sap_port.sap))
@@ -1681,7 +1687,8 @@ class NFFGToolBox(object):
                     flowrule.match += match_tag
                     log.info("TAG conversion: extend match field in a "
                              "flowrule of infra %s" % infra.id)
-                    log.info("updated flowrule: %s" % flowrule)
+                    log.info("updated flowrule (%s):\n %s"
+                             % (flowrule.id, flowrule))
                 else:
                   log.debug("Found user SAP port: %s" %
                             sap_port)
@@ -1691,14 +1698,16 @@ class NFFGToolBox(object):
                                             flowrule.match)
                     log.info("TAG conversion: remove TAG match in a "
                              "flowrule of infra %s" % infra.id)
-                    log.info("updated flowrule: %s" % flowrule)
+                    log.info("updated flowrule (%s):\n %s"
+                             % (flowrule.id, flowrule))
             # process outbound flowrules of SAP ports
             if re.search('output=', flowrule.action):
               output = re.sub(r'.*output=([^;]*).*', r'\1',
                               flowrule.action)
               if str(output) == str(sap_port.id):
                 # found outbound rule
-                log.debug("Found outbound rule: %s" % flowrule)
+                log.debug("Found outbound rule (%s):\n %s"
+                          % (flowrule.id, flowrule))
                 if sap_port.sap is not None:
                   log.debug("Found inter-domain SAP port: %s, %s" %
                             (sap_port, sap_port.sap))
@@ -1708,7 +1717,8 @@ class NFFGToolBox(object):
                     flowrule.action += push_tag
                     log.info("TAG conversion: extend action field in a "
                              "flowrule of infra %s" % infra.id)
-                    log.info("updated flowrule: %s" % flowrule)
+                    log.info("updated flowrule (%s):\n %s"
+                             % (flowrule.id, flowrule))
                 else:
                   log.debug("Found user SAP port: %s" %
                             sap_port)
@@ -1723,7 +1733,8 @@ class NFFGToolBox(object):
                     flowrule.action += ';UNTAG'
                     log.info("TAG conversion: add UNTAG action in a "
                              "flowrule of infra %s" % infra.id)
-                    log.info("updated flowrule: %s" % flowrule)
+                    log.info("updated flowrule (%s):\n %s"
+                             % (flowrule.id, flowrule))
     return slices
 
   @staticmethod
@@ -1919,10 +1930,13 @@ class NFFGToolBox(object):
       log.log(5, "SAP:\n%s" % c_sap.dump())
       # Discover and add SAP connections
       for u, v, l in nffg.real_out_edges_iter(sap.id):
+        if len(sap.ports) > 1:
+          log.warning("SAP contains multiple port!")
+        sbb_infra_port = sbb_infra.add_port(id=str(c_sap.id),
+                                            sap=sap.ports.container[0].sap)
         # Explicitly add links for both direction
         link1, link2 = sbb.add_undirected_link(port1=c_sap.ports[l.src.id],
-                                               port2=sbb_infra.add_port(
-                                                 "port-%s" % c_sap.id),
+                                               port2=sbb_infra_port,
                                                p1p2id=l.id,
                                                p2p1id="%s-back" % l.id,
                                                delay=l.delay,
@@ -1974,9 +1988,15 @@ class NFFGToolBox(object):
         fr_match = "in_port=%s;flowclass=%s" % (sbb_src_port.id, flowclass)
       else:
         fr_match = "in_port=%s" % sbb_src_port.id
+      fr_action="output=%s" % sbb_dst_port.id
+      if value[0].node.type == NFFG.TYPE_SAP and \
+         value[1].node.type == NFFG.TYPE_NF and \
+         value[0].sap is not None:
+        # Update action for flowrule connecting inter-domain SAP to NF
+        fr_action+=";UNTAG"
       fr = sbb_src_port.add_flowrule(id=fr_hop,
                                      match=fr_match,
-                                     action="output=%s" % sbb_dst_port.id,
+                                     action=fr_action,
                                      bandwidth=fr_bw,
                                      delay=fr_delay, )
       log.debug("Added flowrule: %s" % fr)
@@ -1997,6 +2017,7 @@ class NFFGToolBox(object):
         log.debug("Added SG hop: %s" % sg)
     else:
       log.debug("Skip SG hop recreation for the SingleBiSBiS!")
+    NFFGToolBox.rewrite_interdomain_tags([(sbb.id, sbb)])
     log.debug("END SBB generation...")
     # Return with Single BiSBiS infra
     return sbb
@@ -2344,7 +2365,7 @@ class NFFGToolBox(object):
         log.debug("Copy NFFG node: %s" % c_obj)
       else:
         for p in obj.ports:
-          if p not in target.network.node[obj.id].ports:
+          if p.id not in target.network.node[obj.id].ports:
             target.network.node[obj.id].add_port(id=p.id,
                                                  properties=p.properties)
             # TODO: Flowrules are not copied!
@@ -2370,16 +2391,21 @@ class NFFGToolBox(object):
         log.debug("Copy NFFG node: %s" % c_obj)
       else:
         for p in obj.ports:
-          if p not in target.network.node[obj.id].ports:
+          if p.id not in target.network.node[obj.id].ports:
             new_port = target.network.node[obj.id].add_port(id=p.id,
-                                                 properties=p.properties)
+                                                            properties=p.properties)
             log.debug("Copy port %s to NFFG element %s" % (p, obj))
             if hasattr(p, 'flowrules'):
-              log.debug("Merging flowrules of port %s of node %s"%
+              log.debug("Merging flowrules of port %s of node %s" %
                         (p.id, obj.id))
               for fr in p.flowrules:
                 if fr.id not in (f.id for f in new_port.flowrules):
                   new_port.flowrules.append(copy.deepcopy(fr))
+          else:
+            old_port = target.network.node[obj.id].ports[p.id]
+            for fr in p.flowrules:
+              if fr.id not in (f.id for f in old_port.flowrules):
+                old_port.flowrules.append(copy.deepcopy(fr))
     return target
 
   @classmethod
@@ -2557,6 +2583,11 @@ class NFFGToolBox(object):
             raise RuntimeError("InfraPort %s has more than one inbound "
                                "links!" % port.id)
           link = d
+    if link == None:
+      raise RuntimeError(" ".join(("Dynamic" if accept_dyn else "Static",
+                                   "outbound" if outbound else "inbound",
+                                   "link couldnt be found connected to port",
+                                   str(port))))
     return link
 
   @staticmethod

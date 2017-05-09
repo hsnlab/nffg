@@ -1592,7 +1592,10 @@ class InfraPort(Port):
   Class for storing a port of Infra Node and handles flowrules.
   """
 
-  def __init__ (self, node, properties=None, id=None, metadata=None):
+  def __init__ (self, node, id=None, name=None, properties=None, sap=None,
+                capability=None, technology=None, delay=None, bandwidth=None,
+                cost=None, controller=None, orchestrator=None, l2=None, l4=None,
+                metadata=None):
     """
     Init.
 
@@ -1606,7 +1609,13 @@ class InfraPort(Port):
     :type metadata: dict
     :return: None
     """
-    super(InfraPort, self).__init__(node=node, id=id, properties=properties,
+    super(InfraPort, self).__init__(node=node, id=id, name=name,
+                                    properties=properties, sap=sap,
+                                    capability=capability,
+                                    technology=technology, delay=delay,
+                                    bandwidth=bandwidth, cost=cost,
+                                    controller=controller,
+                                    orchestrator=orchestrator, l2=l2, l4=l4,
                                     metadata=metadata)
     self.flowrules = []
 
@@ -1932,7 +1941,10 @@ class NodeInfra(Node):
     :return: newly created and stored Port object
     :rtype: :any:`InfraPort`
     """
-    port = InfraPort(self, properties=properties, id=id)
+    port = InfraPort(self, id=id, name=name, properties=properties, sap=sap,
+                     capability=capability, technology=technology, delay=delay,
+                     bandwidth=bandwidth, cost=cost, controller=controller,
+                     orchestrator=orchestrator, l2=l2, l4=l4, metadata=metadata)
     self.ports.append(port)
     return port
 
