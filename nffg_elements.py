@@ -1511,7 +1511,8 @@ class Flowrule(Element):
   Class for storing a flowrule.
   """
 
-  def __init__ (self, id=None, match="", action="", bandwidth=None, delay=None):
+  def __init__ (self, id=None, match="", action="", bandwidth=None, delay=None,
+                external=False):
     """
     Init.
 
@@ -1523,6 +1524,8 @@ class Flowrule(Element):
     :type bandwidth: float
     :param delay: delay
     :type delay: float
+    :param external: mark the flowrule as external --> should not process
+    :type external: bool
     :return: None
     """
     super(Flowrule, self).__init__(id=id, type="FLOWRULE")
@@ -1530,6 +1533,7 @@ class Flowrule(Element):
     self.action = action  # mandatory
     self.bandwidth = bandwidth
     self.delay = delay
+    self.external = external
 
   def persist (self):
     """
@@ -1547,6 +1551,8 @@ class Flowrule(Element):
       flowrule['bandwidth'] = self.bandwidth
     if self.delay:
       flowrule['delay'] = self.delay
+    if self.external:
+      flowrule['external'] = self.external
     return flowrule
 
   def load (self, data, *args, **kwargs):
@@ -1562,6 +1568,7 @@ class Flowrule(Element):
     self.action = data.get('action')
     self.bandwidth = float(data['bandwidth']) if 'bandwidth' in data else None
     self.delay = float(data['delay']) if 'delay' in data else None
+    self.external = float(data['external']) if 'external' in data else False
     return self
 
   def __repr__ (self):
@@ -1572,8 +1579,9 @@ class Flowrule(Element):
     :rtype: str
     """
     return "Flowrule object:\nmatch: %s \naction: %s \nbandwidth: " \
-           "%s \ndelay: %s" % (
-             self.match, self.action, self.bandwidth, self.delay)
+           "%s \ndelay: %s \nexternal: %s" % (self.match, self.action,
+                                              self.bandwidth, self.delay,
+                                              self.external)
 
   def __str__ (self):
     """
@@ -1582,9 +1590,9 @@ class Flowrule(Element):
     :return: string representation
     :rtype: str
     """
-    return "%s(match: %s, action: %s, bandwidth: %s, delay: %s)" % (
-      self.__class__.__name__, self.match, self.action, self.bandwidth,
-      self.delay)
+    return "%s(match: %s, action: %s, bandwidth: %s, delay: %s, external: %s)" \
+           % (self.__class__.__name__, self.match, self.action, self.bandwidth,
+              self.delay, self.external)
 
 
 class InfraPort(Port):
@@ -1619,7 +1627,8 @@ class InfraPort(Port):
                                     metadata=metadata)
     self.flowrules = []
 
-  def add_flowrule (self, match, action, bandwidth=None, delay=None, id=None):
+  def add_flowrule (self, match, action, bandwidth=None, delay=None, id=None,
+                    external=False):
     """
     Add a flowrule with the given params to the port of an Infrastructure Node.
 
@@ -1637,7 +1646,7 @@ class InfraPort(Port):
     :rtype: :any:`Flowrule`
     """
     flowrule = Flowrule(id=id, match=match, action=action, bandwidth=bandwidth,
-                        delay=delay)
+                        delay=delay, external=external)
     self.flowrules.append(flowrule)
     return flowrule
 

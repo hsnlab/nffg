@@ -2736,6 +2736,8 @@ class NFFGToolBox(object):
     for i in nffg.infras:
       for p in i.ports:
         for fr in p.flowrules:
+          if fr.external:
+            continue
           if fr.id not in sg_map:
             # The path is unordered!!
             path_of_shop = []
