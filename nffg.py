@@ -2665,6 +2665,9 @@ class NFFGToolBox(object):
     for action in fr.action.split(";"):
       comm, arg = action.split("=", 1)
       if comm == 'output':
+        if "://" in arg:
+          # target-less flow rule -> skip
+          return
         arg = NFFGToolBox.try_to_convert(arg)
         return infra.ports[arg]
     else:
@@ -2760,6 +2763,8 @@ class NFFGToolBox(object):
 
             # We have to find the ENDING of this flowrule sequence.
             output_port = NFFGToolBox._get_output_port_of_flowrule(i, fr)
+            if output_port is None:
+              continue
             outbound_link = NFFGToolBox._find_infra_link(nffg, output_port,
                                                          outbound=True,
                                                          accept_dyn=True)
@@ -2801,6 +2806,8 @@ class NFFGToolBox(object):
     sg_map = NFFGToolBox.get_all_sghop_info(nffg)
     for sg_hop_id, data in sg_map.iteritems():
       src, dst, flowclass, bandwidth, delay = data
+      if not (src and dst):
+        continue
       if not nffg.network.has_edge(src.node.id, dst.node.id, key=sg_hop_id):
         nffg.add_sglink(src, dst, id=sg_hop_id, flowclass=flowclass,
                         bandwidth=bandwidth, delay=delay)
