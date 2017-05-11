@@ -1551,6 +1551,8 @@ class NFFGToolBox(object):
       # Check orphaned or not connected nodes and remove them
       log.debug("Trim orphaned nodes from splitted part...")
       cls.trim_orphaned_nodes(nffg=nffg_part, log=log)
+      log.debug("Merge external ports into it's original SAP port...")
+      cls.merge_external_ports(nffg=nffg_part, log=log)
     log.info("Splitting has been finished!")
     return splitted_parts
 
@@ -2819,3 +2821,76 @@ class NFFGToolBox(object):
         #    sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
         #    NFFGToolBox._check_flow_consistencity(sg_map, sg_hop)
     return nffg
+
+  @staticmethod
+  def move_flowrules (from_port, to_port, infra, log=logging.getLogger("MOVE")):
+    """
+    Move flowrules from `from` to `to_port` handling match/action fields.
+
+    :param from_port: origin port
+    :type from_port: :class:`InfraPort`
+    :param to_port: target port
+    :type to_port: :class:`InfraPort`
+    :param infra: container node
+    :type infra: :class:`NodeInfra`
+    :param log: additional logger
+    :type log: :any:`logging.Logger`
+    :return: None
+    """
+    # Flowrules pointing to the from_port -> rewrite output reference in action
+    for port in infra.ports:
+      for fr in port.flowrules:
+        output = fr.action.split(';', 1)[0].split('=', 1)[1]
+        try:
+          output = int(output)
+        except ValueError:
+          pass
+        if output == from_port.id:
+          # Rewrite output tag
+          fr.action = fr.action.replace("output=%s" % output,
+                                        "output=%s" % to_port.id, 1)
+          log.debug("Rewritten inbound flowrule: %s" % fr)
+    # Contained flowrules need to be rewritten and moved to the target port
+    for fr in from_port.flowrules:
+      # Rewrite in_port tag
+      fr.match = fr.match.replace(fr.match.split(';', 1)[0],
+                                  "in_port=%s" % to_port.id, 1)
+      # Move flowrule
+      to_port.flowrules.append(fr)
+      log.debug("Moved outbound flowrule: %s" % fr)
+    # Clear flowrule list
+    del from_port.flowrules[:]
+
+  @classmethod
+  def merge_external_ports (cls, nffg, log=logging.getLogger("MERGE")):
+    """
+    Merge detected external ports in nodes of given `nffg` 
+    and only leave the original SAP port.
+    
+    :param nffg: container node
+    :type nffg: :class:`NFFG`
+    :param log: additional logger
+    :type log: :any:`logging.Logger`
+    :return: None
+    """
+    for infra in nffg.infras:
+      for ext_port in [p for p in infra.ports if p.role == "EXTERNAL"]:
+        log.debug("Found external port: %s" % ext_port)
+        # Collect ports with the same SAP tag
+        origin_port = [p for p in infra.ports if p.sap == ext_port.sap and
+                       p.role != "EXTERNAL"]
+        if len(origin_port) != 1:
+          log.error("Original port for external port: %s is not found uniquely:"
+                    " %s" % (ext_port, origin_port))
+          continue
+        origin_port = origin_port.pop()
+        log.debug("Detected original port for %s -> %s" % (ext_port.id,
+                                                           origin_port))
+        # Move flowrules
+        log.debug("Merge external port %s into %s..." % (ext_port, origin_port))
+        cls.move_flowrules(from_port=ext_port, to_port=origin_port, infra=infra,
+                           log=log)
+        # Remove external port
+        log.debug("Remove external SAP: %s" % ext_port.id)
+        nffg.del_node(node=nffg[ext_port.id])
+        infra.ports.remove(ext_port)
