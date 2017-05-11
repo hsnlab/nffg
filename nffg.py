@@ -1988,12 +1988,12 @@ class NFFGToolBox(object):
         fr_match = "in_port=%s;flowclass=%s" % (sbb_src_port.id, flowclass)
       else:
         fr_match = "in_port=%s" % sbb_src_port.id
-      fr_action="output=%s" % sbb_dst_port.id
+      fr_action = "output=%s" % sbb_dst_port.id
       if value[0].node.type == NFFG.TYPE_SAP and \
-         value[1].node.type == NFFG.TYPE_NF and \
-         value[0].sap is not None:
+            value[1].node.type == NFFG.TYPE_NF and \
+            value[0].sap is not None:
         # Update action for flowrule connecting inter-domain SAP to NF
-        fr_action+=";UNTAG"
+        fr_action += ";UNTAG"
       fr = sbb_src_port.add_flowrule(id=fr_hop,
                                      match=fr_match,
                                      action=fr_action,
@@ -2736,8 +2736,8 @@ class NFFGToolBox(object):
     for i in nffg.infras:
       for p in i.ports:
         for fr in p.flowrules:
-          if fr.external:
-            continue
+          # if fr.external:
+          #   continue
           if fr.id not in sg_map:
             # The path is unordered!!
             path_of_shop = []
