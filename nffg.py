@@ -2823,9 +2823,10 @@ class NFFGToolBox(object):
     return nffg
 
   @staticmethod
-  def move_flowrules (from_port, to_port, infra, log=logging.getLogger("MOVE")):
+  def redirect_flowrules (from_port, to_port, infra, mark_external=False,
+                          log=logging.getLogger("MOVE")):
     """
-    Move flowrules from `from` to `to_port` handling match/action fields.
+    Redirect flowrules from `from` to `to_port` handling match/action fields.
 
     :param from_port: origin port
     :type from_port: :class:`InfraPort`
@@ -2833,6 +2834,8 @@ class NFFGToolBox(object):
     :type to_port: :class:`InfraPort`
     :param infra: container node
     :type infra: :class:`NodeInfra`
+    :param mark_external: mark redirected flowrule as external
+    :type mark_external: bool
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: None
@@ -2849,12 +2852,16 @@ class NFFGToolBox(object):
           # Rewrite output tag
           fr.action = fr.action.replace("output=%s" % output,
                                         "output=%s" % to_port.id, 1)
+          if mark_external:
+            fr.external = True
           log.debug("Rewritten inbound flowrule: %s" % fr)
     # Contained flowrules need to be rewritten and moved to the target port
     for fr in from_port.flowrules:
       # Rewrite in_port tag
       fr.match = fr.match.replace(fr.match.split(';', 1)[0],
                                   "in_port=%s" % to_port.id, 1)
+      if mark_external:
+        fr.external = True
       # Move flowrule
       to_port.flowrules.append(fr)
       log.debug("Moved outbound flowrule: %s" % fr)
@@ -2887,9 +2894,10 @@ class NFFGToolBox(object):
         log.debug("Detected original port for %s -> %s" % (ext_port.id,
                                                            origin_port))
         # Move flowrules
-        log.debug("Merge external port %s into %s..." % (ext_port, origin_port))
-        cls.move_flowrules(from_port=ext_port, to_port=origin_port, infra=infra,
-                           log=log)
+        log.debug("Redirect external port %s traffic into %s..."
+                  % (ext_port, origin_port))
+        cls.redirect_flowrules(from_port=ext_port, to_port=origin_port,
+                               infra=infra, mark_external=True, log=log)
         # Remove external port
         log.debug("Remove external SAP: %s" % ext_port.id)
         nffg.del_node(node=nffg[ext_port.id])
