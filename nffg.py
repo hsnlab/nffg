@@ -24,6 +24,7 @@ import re
 from copy import deepcopy
 
 import networkx
+from collections import defaultdict
 from networkx.exception import NetworkXError
 
 from nffg_elements import *
@@ -2902,3 +2903,198 @@ class NFFGToolBox(object):
         log.debug("Remove external SAP: %s" % ext_port.id)
         nffg.del_node(node=nffg[ext_port.id])
         infra.ports.remove(ext_port)
+
+
+  def isStaticInfraPort (cls, G, p):
+    """
+    Return true if there is a Static outbound or inbound EdgeLink, false if there
+    is a Dynamic outbound or inbound link, throws exception if borth, or warning
+    if multiple of the same type.
+    :param G:
+    :param p:
+    :return:
+    """
+    static_link_found = False
+    dynamic_link_found = False
+    for edge_func, src_or_dst in ((G.out_edges_iter, 'src'),
+                                  (G.in_edges_iter, 'dst')):
+      for i,j,k,link in edge_func([p.node.id], data=True, keys=True):
+        src_or_dst_port = getattr(link, src_or_dst)
+        # check if we have found the right port
+        if src_or_dst_port.id == p.id:
+          if link.type == NFFG.TYPE_LINK_DYNAMIC:
+            dynamic_link_found = True
+          elif link.type == NFFG.TYPE_LINK_STATIC:
+            static_link_found = True
+    if static_link_found == dynamic_link_found:
+      raise RuntimeError(
+        "An InfraPort should either be connected to STATIC or DYNAMIC links"
+        "Both or none STATIC/DYNAMIC in/outbound links found to port %s" % p.id)
+    elif static_link_found:
+      return True
+    elif dynamic_link_found:
+      return False
+
+
+  def explodeGraphWithPortnodes(cls, G, id_connector_character):
+    """
+    Makes ports of the original graph into the nodes of a new NetworkX graph,
+    adds delay values onto edge data. The returned graph can be used by standard
+    networkx algorithms.
+    :param id_connector_character: character which is used to concatenate and
+            separate port IDs from/to node IDs
+    :param G:
+    :return:
+    """
+    exploded_G = networkx.MultiDiGraph()
+    for id, obj in G.nodes_iter(data=True):
+      if obj.type == NFFG.TYPE_INFRA:
+        static_ports_of_infra = filter(lambda p, graph=G: NFFGToolBox.isStaticInfraPort(G, p),
+                                       obj.ports)
+        # NOTE: obj.id == p.node.id because of iterating on obj.ports
+        static_ports_of_infra_global_ids = map(
+          lambda p, c=id_connector_character: id_connector_character.join(
+            (str(p.id), p.node.id)), static_ports_of_infra)
+        exploded_G.add_nodes_from(static_ports_of_infra_global_ids)
+        if type(obj.resources.delay) == type(dict):
+          # delay is dict of dicts storing the directed distances between ports
+          for port1, distances in obj.resources.delay.iteritems():
+            for port2, dist in distances.iteritems():
+              exploded_G.add_edge(id_connector_character.join((str(port1), obj.id)),
+                                  id_connector_character.join((str(port2), obj.id)),
+                                  attr_dict={'delay': dist})
+        else:
+          # support filling the delay matrix even if the node has only a single
+          # delay value, for partial backward compatibility and convenience
+          universal_node_delay = obj.resources.delay if obj.resources.delay \
+                                                        is not None else 0.0
+          for i in static_ports_of_infra_global_ids:
+            for j in static_ports_of_infra_global_ids:
+              if i != j:
+                exploded_G.add_edge(i,j,attr_dict={'delay': universal_node_delay})
+      elif obj.type == NFFG.TYPE_SAP:
+        sap_port_found = False
+        for p in obj.ports:
+          if not sap_port_found:
+            exploded_G.add_node(id_connector_character.join((str(p.id), p.node.id)))
+          else:
+            exploded_G.add_node(id_connector_character.join((str(p.id), p.node.id)))
+            # TODO: In this case multiple nodes in the exploded graph shuold be
+            # connected with 0 delay links!
+            # log.warn("Multiple ports found in SAP object!")
+    # all ports are added as nodes, and the links between the ports denoting the
+    # shortest paths inside the infra node are added already.
+    # Add links connecting infra nodes and SAPs
+    for i,j,k,link in G.edges_iter(data=True, keys=True):
+      if link.type == NFFG.TYPE_LINK_STATIC:
+        # if a link delay is None, we should take it as 0ms delay.
+        link_delay = link.delay if link.delay is not None else 0.0
+        exploded_G.add_edge(id_connector_character.join((str(link.src.id), i)),
+                            id_connector_character.join((str(link.dst.id), j)),
+                            key=k, attr_dict={'delay': link_delay})
+    return exploded_G
+
+
+  def extractDistsFromExploded(cls, G, exploded_dists, id_connector_character):
+    """
+    Extracts the shortest path length matrix from the calculation result on the
+    exploded graph structure.
+    :param exploded_dists:
+    :param id_connector_character:
+    :return:
+    """
+    dist = defaultdict(lambda: defaultdict(lambda: float('inf')))
+    min_dist_pairs = defaultdict(lambda: defaultdict(lambda: None))
+    for u, obju in G.nodes_iter(data=True):
+      # SAPs and Infras are handled the same at this point.
+      if obju.type == NFFG.TYPE_INFRA or obju.type == NFFG.TYPE_SAP:
+        # a list of (global_port_id, dist_dict) tuples
+        possible_dicts = filter(
+          lambda tup, original_id=u, sep=id_connector_character: original_id ==
+                                                                 tup[0].split(sep)[
+                                                                   1],
+          exploded_dists.iteritems())
+        for v, objv in G.nodes_iter(data=True):
+          if objv.type == NFFG.TYPE_INFRA or objv.type == NFFG.TYPE_SAP:
+            possible_ending_nodes = filter(
+              lambda portid, original_id=v, sep=id_connector_character:
+              original_id == portid.split(sep)[1],
+              exploded_dists.iterkeys())
+            # now we need to choose the minimum of the possible distances.
+            for starting_node, d in possible_dicts:
+              for ending_node in possible_ending_nodes:
+                if ending_node in d:
+                  if d[ending_node] < dist[u][v]:
+                    dist[u][v] = d[ending_node]
+                    min_dist_pairs[u][v] = (starting_node, ending_node)
+    # convert defaultdicts to dicts for safety reasons
+    for k in dist:
+      dist[k] = dict(dist[k])
+    for k in min_dist_pairs:
+      min_dist_pairs[k] = dict(min_dist_pairs[k])
+    return dict(dist), dict(min_dist_pairs)
+
+
+  def extractPathsFromExploded(cls, exploded_paths_dict, min_dist_pairs,
+                               id_connector_character):
+    """
+    Extracts and transforms paths from the matrix of shortest paths calculated on
+    the exploded graph structure.
+    :param exploded_paths_dict:
+    :param min_dist_pairs:
+    :param id_connector_character:
+    :return:
+    """
+    min_length_paths = defaultdict(lambda: defaultdict(lambda: None))
+    for original_starting_node, d in min_dist_pairs.iteritems():
+      for original_ending_node, tup in d.iteritems():
+        exploded_path = exploded_paths_dict[tup[0]][tup[1]]
+        # get only the exploded IDs, which come from node ID-s
+        path_with_only_node_ids = filter(
+          lambda lid, sep=id_connector_character: sep in lid, exploded_path)
+        # transform them back to the original ID-s
+        path_with_original_node_ids = map(
+          lambda lid, sep=id_connector_character: lid.split(sep)[1],
+          path_with_only_node_ids)
+        # the startgin and ending node ID may not be in place
+        if path_with_original_node_ids[0] != original_starting_node:
+          path_with_original_node_ids.insert(0, original_starting_node)
+        if path_with_original_node_ids[-1] != original_ending_node:
+          path_with_original_node_ids.append(original_ending_node)
+
+        # a transit infra appears twice in the path after each other, because
+        # there was an inbound and an outbound port.
+        path_with_original_node_ids_no_duplicates = [path_with_original_node_ids[0]]
+        for n in path_with_original_node_ids:
+          if n != path_with_original_node_ids_no_duplicates[-1]:
+            path_with_original_node_ids_no_duplicates.append(n)
+        min_length_paths[original_starting_node][original_ending_node] = \
+          path_with_original_node_ids_no_duplicates
+
+    # convert embedded default dicts
+    for k in min_length_paths:
+      min_length_paths[k] = dict(min_length_paths[k])
+    return dict(min_length_paths)
+
+
+  def shortestPathsInLatency (cls, G, return_paths=False, id_connector_character='&'):
+    """
+    Calculates shortest pased considering latencies between Infra node ports.
+    Uses only the infrastructure part of an NFFG, non Infra nodes doesn't have
+    internal forwarding latencies.
+    :param G:
+    :param return_paths:
+    :return:
+    """
+    exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G, id_connector_character)
+
+    exploded_dists = networkx.all_pairs_dijkstra_path_length(exploded_G, weight='delay')
+    dists, min_dist_pairs = NFFGToolBox.extractDistsFromExploded(G, exploded_dists, id_connector_character)
+
+    if return_paths:
+      exploded_paths = networkx.all_pairs_dijkstra_path(exploded_G, weight='delay')
+      paths = NFFGToolBox.extractPathsFromExploded(exploded_paths, min_dist_pairs,
+                                       id_connector_character)
+      return paths, dists
+    else:
+      return dists
