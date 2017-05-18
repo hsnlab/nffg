@@ -1368,6 +1368,11 @@ class DelayMatrix(Persistable):
       self.matrix[src] = OrderedDict()
     self.matrix[src][dst] = delay
 
+  def get_delay (self, src, dst):
+    if src in self.matrix:
+      if dst in self.matrix[src]:
+        return self.matrix[src][dst]
+
   def del_delay (self, src, dst):
     if src in self.matrix:
       if dst in self.matrix[src]:
