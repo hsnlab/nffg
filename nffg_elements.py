@@ -1333,6 +1333,47 @@ class Link(Element):
 # ---------- NODE AND LINK RESOURCES, ATTRIBUTES -------------------
 ################################################################################
 
+class DelayMatrix(Persistable):
+  """
+  Delay Matrix keyed by Port IDs.
+  """
+
+  def __init__ (self):
+    super(DelayMatrix, self).__init__()
+    self.matrix = OrderedDict()
+
+  def persist (self):
+    res = super(DelayMatrix, self).persist()
+    for k, v in self.matrix.iteritems():
+      if not isinstance(v, dict):
+        continue
+      for kk, vv in v.iteritems():
+        if k not in res:
+          res[k] = OrderedDict()
+        try:
+          res[k][kk] = float(vv)
+        except ValueError:
+          res[k][kk] = vv
+    return res
+
+  def load (self, data, *args, **kwargs):
+    self.matrix.update(data)
+    return self
+
+  def is_empty (self):
+    return sum([len(e) for e in self.matrix]) == 0
+
+  def add_delay (self, src, dst, delay):
+    if src not in self.matrix:
+      self.matrix[src] = OrderedDict()
+    self.matrix[src][dst] = delay
+
+  def del_delay (self, src, dst):
+    if src in self.matrix:
+      if dst in self.matrix[src]:
+        return self.matrix[src].pop(dst)
+
+
 class NodeResource(Persistable):
   """
   Class for storing resource information for Nodes.
@@ -1907,6 +1948,7 @@ class NodeInfra(Node):
       self.supported = []
       # Set resource container
     self.resources = res if res is not None else NodeResource()
+    self.delay_matrix = DelayMatrix()
 
   def add_port (self, id=None, name=None, properties=None, sap=None,
                 capability=None, technology=None, delay=None, bandwidth=None,
@@ -2044,6 +2086,8 @@ class NodeInfra(Node):
       node["resources"] = res
     if self.mapping_features:
       node['mapping_features'] = self.mapping_features.copy()
+    if not self.delay_matrix.is_empty():
+      node['delay_matrix'] = self.delay_matrix.persist()
     return node
 
   def load (self, data, *args, **kwargs):
@@ -2063,6 +2107,8 @@ class NodeInfra(Node):
       self.resources.load(data['resources'])
     if 'mapping_features' in data:
       self.mapping_features = data['mapping_features']
+    if 'delay_matrix' in data:
+      self.delay_matrix.load(data['delay_matrix'])
     return self
 
   def __str__ (self):
