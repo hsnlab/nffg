@@ -2952,10 +2952,14 @@ class NFFGToolBox(object):
             dynamic_link_found = True
           elif link.type == NFFG.TYPE_LINK_STATIC:
             static_link_found = True
-    if static_link_found == dynamic_link_found:
+    if dynamic_link_found and static_link_found:
       raise RuntimeError(
-        "An InfraPort should either be connected to STATIC or DYNAMIC links"
-        "Both or none STATIC/DYNAMIC in/outbound links found to port %s" % p.id)
+        "An InfraPort should either be connected to STATIC or DYNAMIC links "
+        "Both STATIC and DYNAMIC in/outbound links found to port %s of Infra "
+        "%s" % (p.id, p.node.id))
+    elif not dynamic_link_found and not static_link_found:
+      # If a port is found which is not connected to any STATIC or DYNAMIC link
+      return False
     elif static_link_found:
       return True
     elif dynamic_link_found:
