@@ -1301,7 +1301,7 @@ class NFFGToolBox(object):
             "SAP is not connected to any node! Maybe you forgot to call "
             "duplicate_static_links?")
           return
-        if 1 < len(b_links):
+        elif 1 < len(b_links):
           log.warning(
             "Inter-domain SAP should have one and only one connection to the "
             "domain! Using only the first connection.")
@@ -1317,7 +1317,7 @@ class NFFGToolBox(object):
             "SAP is not connected to any node! Maybe you forgot to call "
             "duplicate_static_links?")
           return
-        if 1 < len(n_links):
+        elif 1 < len(n_links):
           log.warning(
             "Inter-domain SAP should have one and only one connection to the "
             "domain! Using only the first connection.")
@@ -1330,47 +1330,50 @@ class NFFGToolBox(object):
         sap_port_nffg = n_links[0].src
         log.debug("Found inter-domain port: %s" % domain_port_nffg)
 
-        # If the two resource value does not match
-        if sap_port_dov.delay != sap_port_nffg.delay:
-          if sap_port_dov.delay is None:
-            # If first is None the other can not be None
-            s_delay = sap_port_nffg.delay
-          elif sap_port_nffg.delay is None:
-            # If second is None the other can not be None
-            s_delay = sap_port_dov.delay
-          else:
-            # Both values are valid, but different
-            s_delay = max(sap_port_dov.delay, sap_port_nffg.delay)
-            log.warning(
-              "Inter-domain delay values (%s, %s) are set but do not match!"
-              " Use max: %s" % (sap_port_dov.delay, sap_port_nffg.delay,
-                                s_delay))
-        else:
-          # Both value match: ether valid values or Nones --> choose first value
-          s_delay = sap_port_dov.delay
-
-        # If the two resource value does not match
-        if sap_port_dov.bandwidth != sap_port_nffg.bandwidth:
-          if sap_port_dov.bandwidth is None:
-            # If first is None the other can not be None
-            s_bandwidth = sap_port_nffg.bandwidth
-          elif sap_port_nffg.bandwidth is None:
-            # If second is None the other can not be None
-            s_bandwidth = sap_port_dov.bandwidth
-          else:
-            # Both values are valid, but different
-            s_bandwidth = min(sap_port_dov.bandwidth,
-                              sap_port_nffg.bandwidth)
-            log.warning(
-              "Inter-domain bandwidth values (%s, %s) are set but do not match!"
-              " Use min: %s" % (sap_port_dov.bandwidth,
-                                sap_port_nffg.bandwidth, s_bandwidth))
-        else:
-          # Both value match: ether valid values or Nones --> choose first value
-          s_bandwidth = sap_port_dov.bandwidth
-
-        log.debug("Detected inter-domain resource values: delay: %s, "
-                  "bandwidth: %s" % (s_delay, s_bandwidth))
+        # # If the two resource value does not match
+        # if sap_port_dov.delay != sap_port_nffg.delay:
+        #   if sap_port_dov.delay is None:
+        #     # If first is None the other can not be None
+        #     s_delay = sap_port_nffg.delay
+        #   elif sap_port_nffg.delay is None:
+        #     # If second is None the other can not be None
+        #     s_delay = sap_port_dov.delay
+        #   else:
+        #     # Both values are valid, but different
+        #     s_delay = max(sap_port_dov.delay, sap_port_nffg.delay)
+        #     log.warning(
+        #       "Inter-domain delay values (%s, %s) are set but do not match!"
+        #       " Use max: %s" % (sap_port_dov.delay, sap_port_nffg.delay,
+        #                         s_delay))
+        # else:
+        #   # Both value match: ether valid values or Nones --> choose first
+        # value
+        #   s_delay = sap_port_dov.delay
+        #
+        # # If the two resource value does not match
+        # if sap_port_dov.bandwidth != sap_port_nffg.bandwidth:
+        #   if sap_port_dov.bandwidth is None:
+        #     # If first is None the other can not be None
+        #     s_bandwidth = sap_port_nffg.bandwidth
+        #   elif sap_port_nffg.bandwidth is None:
+        #     # If second is None the other can not be None
+        #     s_bandwidth = sap_port_dov.bandwidth
+        #   else:
+        #     # Both values are valid, but different
+        #     s_bandwidth = min(sap_port_dov.bandwidth,
+        #                       sap_port_nffg.bandwidth)
+        #     log.warning(
+        #       "Inter-domain bandwidth values (%s, %s) are set but do not
+        # match!"
+        #       " Use min: %s" % (sap_port_dov.bandwidth,
+        #                         sap_port_nffg.bandwidth, s_bandwidth))
+        # else:
+        #   # Both value match: ether valid values or Nones --> choose first
+        # value
+        #   s_bandwidth = sap_port_dov.bandwidth
+        #
+        # log.debug("Detected inter-domain resource values: delay: %s, "
+        #           "bandwidth: %s" % (s_delay, s_bandwidth))
 
         # Copy inter-domain port properties/values for redundant storing
         if len(domain_port_nffg.properties) > 0:
@@ -1426,12 +1429,18 @@ class NFFGToolBox(object):
         nffg.del_node(sap_id)
 
         # Add the inter-domain links for both ways
-        base.add_undirected_link(p1p2id="inter-domain-link-%s" % sap_id,
-                                 p2p1id="inter-domain-link-%s-back" % sap_id,
-                                 port1=domain_port_dov,
-                                 port2=domain_port_nffg,
-                                 delay=s_delay,
-                                 bandwidth=s_bandwidth)
+        l1, l2 = base.add_undirected_link(
+          p1p2id="inter-domain-link-%s" % sap_id,
+          p2p1id="inter-domain-link-%s-back" % sap_id,
+          port1=domain_port_dov,
+          port2=domain_port_nffg)
+        # Set delay/bandwidth values for outgoing link port1 -> port2
+        l1.delay = domain_port_dov.delay
+        l1.bandwidth = domain_port_dov.bandwidth
+        # Set delay/bandwidth values for outgoing link port2 -> port2
+        l2.delay = domain_port_nffg.delay
+        l2.bandwidth = domain_port_nffg.bandwidth
+
       else:
         # Normal SAP --> copy SAP
         c_sap = base.add_sap(sap_obj=deepcopy(nffg.network.node[sap_id]))
