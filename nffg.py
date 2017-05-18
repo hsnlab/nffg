@@ -21,10 +21,10 @@ import logging
 import math
 import pprint
 import re
+from collections import defaultdict
 from copy import deepcopy
 
 import networkx
-from collections import defaultdict
 from networkx.exception import NetworkXError
 
 from nffg_elements import *
@@ -1926,6 +1926,8 @@ class NFFGToolBox(object):
                                                bandwidth=l.bandwidth)
         log.debug("Added connection: %s" % link1)
         log.debug("Added connection: %s" % link2)
+    # Use SAP id --> SBB port id cache for delay matrix calculation
+    delay_matrix_cache = {}
     # Add existing SAPs and their connections to the SingleBiSBiS infra
     for sap in nffg.saps:
       c_sap = sbb.add_sap(sap_obj=sap.copy())
@@ -1946,6 +1948,29 @@ class NFFGToolBox(object):
                                                bandwidth=l.bandwidth)
         log.debug("Added connection: %s" % link1)
         log.debug("Added connection: %s" % link2)
+        delay_matrix_cache[c_sap.id] = sbb_infra_port.id
+    # Shortest paths in format of dict in dict keyed with node ids
+    # e.g. SAP2 --> EE1 --> 4.9
+    latency_paths = NFFGToolBox.shortestPathsInLatency(G=nffg.network)
+    log.log(5, "Calculated latency paths for delay matrix:\n%s"
+            % pprint.pformat(latency_paths))
+    log.log(5, "Collected SAP ports for delay matrix:\n%s"
+            % pprint.pformat(delay_matrix_cache))
+    dm_elements = itertools.permutations(delay_matrix_cache.keys(), 2)
+    for src, dst in dm_elements:
+      if src not in latency_paths:
+        log.warning("Missing node: %s for latency paths: %s!"
+                    % (src, (src, dst)))
+        continue
+      if dst not in latency_paths[src]:
+        log.warning("Missing node: %s for latency paths: %s!"
+                    % (src, (src, dst)))
+      else:
+        sbb_infra.delay_matrix.add_delay(src=src,
+                                         dst=dst,
+                                         delay=latency_paths[src][dst])
+        log.debug("Added delay matrix element [%s --> %s]: %s"
+                  % (src, dst, latency_paths[src][dst]))
     # Recreate flowrules based on NBalazs functions
     sg_hop_info = NFFGToolBox.get_all_sghop_info(nffg=nffg)
     log.debug("Detected SG hop info:\n%s" % pprint.pformat(sg_hop_info))
@@ -2904,10 +2929,11 @@ class NFFGToolBox(object):
         nffg.del_node(node=nffg[ext_port.id])
         infra.ports.remove(ext_port)
 
-
+  @classmethod
   def isStaticInfraPort (cls, G, p):
     """
-    Return true if there is a Static outbound or inbound EdgeLink, false if there
+    Return true if there is a Static outbound or inbound EdgeLink, false if 
+    there
     is a Dynamic outbound or inbound link, throws exception if borth, or warning
     if multiple of the same type.
     :param G:
@@ -2918,7 +2944,7 @@ class NFFGToolBox(object):
     dynamic_link_found = False
     for edge_func, src_or_dst in ((G.out_edges_iter, 'src'),
                                   (G.in_edges_iter, 'dst')):
-      for i,j,k,link in edge_func([p.node.id], data=True, keys=True):
+      for i, j, k, link in edge_func([p.node.id], data=True, keys=True):
         src_or_dst_port = getattr(link, src_or_dst)
         # check if we have found the right port
         if src_or_dst_port.id == p.id:
@@ -2935,8 +2961,8 @@ class NFFGToolBox(object):
     elif dynamic_link_found:
       return False
 
-
-  def explodeGraphWithPortnodes(cls, G, id_connector_character):
+  @classmethod
+  def explodeGraphWithPortnodes (cls, G, id_connector_character):
     """
     Makes ports of the original graph into the nodes of a new NetworkX graph,
     adds delay values onto edge data. The returned graph can be used by standard
@@ -2949,8 +2975,9 @@ class NFFGToolBox(object):
     exploded_G = networkx.MultiDiGraph()
     for id, obj in G.nodes_iter(data=True):
       if obj.type == NFFG.TYPE_INFRA:
-        static_ports_of_infra = filter(lambda p, graph=G: NFFGToolBox.isStaticInfraPort(G, p),
-                                       obj.ports)
+        static_ports_of_infra = filter(
+          lambda p, graph=G: NFFGToolBox.isStaticInfraPort(G, p),
+          obj.ports)
         # NOTE: obj.id == p.node.id because of iterating on obj.ports
         static_ports_of_infra_global_ids = map(
           lambda p, c=id_connector_character: id_connector_character.join(
@@ -2960,9 +2987,10 @@ class NFFGToolBox(object):
           # delay is dict of dicts storing the directed distances between ports
           for port1, distances in obj.resources.delay.iteritems():
             for port2, dist in distances.iteritems():
-              exploded_G.add_edge(id_connector_character.join((str(port1), obj.id)),
-                                  id_connector_character.join((str(port2), obj.id)),
-                                  attr_dict={'delay': dist})
+              exploded_G.add_edge(
+                id_connector_character.join((str(port1), obj.id)),
+                id_connector_character.join((str(port2), obj.id)),
+                attr_dict={'delay': dist})
         else:
           # support filling the delay matrix even if the node has only a single
           # delay value, for partial backward compatibility and convenience
@@ -2971,21 +2999,24 @@ class NFFGToolBox(object):
           for i in static_ports_of_infra_global_ids:
             for j in static_ports_of_infra_global_ids:
               if i != j:
-                exploded_G.add_edge(i,j,attr_dict={'delay': universal_node_delay})
+                exploded_G.add_edge(i, j,
+                                    attr_dict={'delay': universal_node_delay})
       elif obj.type == NFFG.TYPE_SAP:
         sap_port_found = False
         for p in obj.ports:
           if not sap_port_found:
-            exploded_G.add_node(id_connector_character.join((str(p.id), p.node.id)))
+            exploded_G.add_node(
+              id_connector_character.join((str(p.id), p.node.id)))
           else:
-            exploded_G.add_node(id_connector_character.join((str(p.id), p.node.id)))
+            exploded_G.add_node(
+              id_connector_character.join((str(p.id), p.node.id)))
             # TODO: In this case multiple nodes in the exploded graph shuold be
             # connected with 0 delay links!
             # log.warn("Multiple ports found in SAP object!")
     # all ports are added as nodes, and the links between the ports denoting the
     # shortest paths inside the infra node are added already.
     # Add links connecting infra nodes and SAPs
-    for i,j,k,link in G.edges_iter(data=True, keys=True):
+    for i, j, k, link in G.edges_iter(data=True, keys=True):
       if link.type == NFFG.TYPE_LINK_STATIC:
         # if a link delay is None, we should take it as 0ms delay.
         link_delay = link.delay if link.delay is not None else 0.0
@@ -2994,8 +3025,8 @@ class NFFGToolBox(object):
                             key=k, attr_dict={'delay': link_delay})
     return exploded_G
 
-
-  def extractDistsFromExploded(cls, G, exploded_dists, id_connector_character):
+  @classmethod
+  def extractDistsFromExploded (cls, G, exploded_dists, id_connector_character):
     """
     Extracts the shortest path length matrix from the calculation result on the
     exploded graph structure.
@@ -3011,7 +3042,8 @@ class NFFGToolBox(object):
         # a list of (global_port_id, dist_dict) tuples
         possible_dicts = filter(
           lambda tup, original_id=u, sep=id_connector_character: original_id ==
-                                                                 tup[0].split(sep)[
+                                                                 tup[0].split(
+                                                                   sep)[
                                                                    1],
           exploded_dists.iteritems())
         for v, objv in G.nodes_iter(data=True):
@@ -3034,11 +3066,12 @@ class NFFGToolBox(object):
       min_dist_pairs[k] = dict(min_dist_pairs[k])
     return dict(dist), dict(min_dist_pairs)
 
-
-  def extractPathsFromExploded(cls, exploded_paths_dict, min_dist_pairs,
-                               id_connector_character):
+  @classmethod
+  def extractPathsFromExploded (cls, exploded_paths_dict, min_dist_pairs,
+                                id_connector_character):
     """
-    Extracts and transforms paths from the matrix of shortest paths calculated on
+    Extracts and transforms paths from the matrix of shortest paths 
+    calculated on
     the exploded graph structure.
     :param exploded_paths_dict:
     :param min_dist_pairs:
@@ -3064,7 +3097,8 @@ class NFFGToolBox(object):
 
         # a transit infra appears twice in the path after each other, because
         # there was an inbound and an outbound port.
-        path_with_original_node_ids_no_duplicates = [path_with_original_node_ids[0]]
+        path_with_original_node_ids_no_duplicates = [
+          path_with_original_node_ids[0]]
         for n in path_with_original_node_ids:
           if n != path_with_original_node_ids_no_duplicates[-1]:
             path_with_original_node_ids_no_duplicates.append(n)
@@ -3076,8 +3110,9 @@ class NFFGToolBox(object):
       min_length_paths[k] = dict(min_length_paths[k])
     return dict(min_length_paths)
 
-
-  def shortestPathsInLatency (cls, G, return_paths=False, id_connector_character='&'):
+  @classmethod
+  def shortestPathsInLatency (cls, G, return_paths=False,
+                              id_connector_character='&'):
     """
     Calculates shortest pased considering latencies between Infra node ports.
     Uses only the infrastructure part of an NFFG, non Infra nodes doesn't have
@@ -3086,15 +3121,21 @@ class NFFGToolBox(object):
     :param return_paths:
     :return:
     """
-    exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G, id_connector_character)
+    exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G,
+                                                       id_connector_character)
 
-    exploded_dists = networkx.all_pairs_dijkstra_path_length(exploded_G, weight='delay')
-    dists, min_dist_pairs = NFFGToolBox.extractDistsFromExploded(G, exploded_dists, id_connector_character)
+    exploded_dists = networkx.all_pairs_dijkstra_path_length(exploded_G,
+                                                             weight='delay')
+    dists, min_dist_pairs = NFFGToolBox.extractDistsFromExploded(G,
+                                                                 exploded_dists,
+                                                                 id_connector_character)
 
     if return_paths:
-      exploded_paths = networkx.all_pairs_dijkstra_path(exploded_G, weight='delay')
-      paths = NFFGToolBox.extractPathsFromExploded(exploded_paths, min_dist_pairs,
-                                       id_connector_character)
+      exploded_paths = networkx.all_pairs_dijkstra_path(exploded_G,
+                                                        weight='delay')
+      paths = NFFGToolBox.extractPathsFromExploded(exploded_paths,
+                                                   min_dist_pairs,
+                                                   id_connector_character)
       return paths, dists
     else:
       return dists
