@@ -1378,6 +1378,17 @@ class DelayMatrix(Persistable):
       if dst in self.matrix[src]:
         return self.matrix[src].pop(dst)
 
+  def __contains__ (self, item):
+    return item in self.matrix
+
+  def __getitem__ (self, item):
+    return self.matrix[item]
+
+  def __iter__ (self):
+    return ((src, dst, self.matrix[src][dst])
+            for src in self.matrix
+            for dst in self.matrix[src])
+
 
 class NodeResource(Persistable):
   """
