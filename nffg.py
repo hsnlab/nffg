@@ -2994,7 +2994,7 @@ class NFFGToolBox(object):
         # NOTE: obj.id == p.node.id because of iterating on obj.ports
         static_ports_of_infra_global_ids = map(
           lambda p, c=id_connector_character: id_connector_character.join(
-            (str(p.id), p.node.id)), static_ports_of_infra)
+            (str(p.id), str(p.node.id))), static_ports_of_infra)
         exploded_G.add_nodes_from(static_ports_of_infra_global_ids)
         if type(obj.resources.delay) == type(dict):
           # delay is dict of dicts storing the directed distances between ports
@@ -3033,8 +3033,8 @@ class NFFGToolBox(object):
       if link.type == NFFG.TYPE_LINK_STATIC:
         # if a link delay is None, we should take it as 0ms delay.
         link_delay = link.delay if link.delay is not None else 0.0
-        exploded_G.add_edge(id_connector_character.join((str(link.src.id), i)),
-                            id_connector_character.join((str(link.dst.id), j)),
+        exploded_G.add_edge(id_connector_character.join((str(link.src.id), str(i))),
+                            id_connector_character.join((str(link.dst.id), str(j))),
                             key=k, attr_dict={'delay': link_delay})
     return exploded_G
 
