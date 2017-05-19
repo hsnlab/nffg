@@ -1370,19 +1370,15 @@ class DelayMatrix(Persistable):
 
   def get_delay (self, src, dst):
     # id-s are always string in delay matrix, because of JSON standard
-    src_string = str(src)
-    dst_string = str(dst)
-    if src_string in self.matrix:
-      if dst_string in self.matrix[src_string]:
-        return self.matrix[src_string][dst_string]
+    if src in self.matrix:
+      if dst in self.matrix[src]:
+        return self.matrix[src][dst]
 
   def del_delay (self, src, dst):
     # id-s are always string in delay matrix, because of JSON standard
-    src_string = str(src)
-    dst_string = str(dst)
-    if src_string in self.matrix:
-      if dst_string in self.matrix[src_string]:
-        return self.matrix[src_string].pop(dst_string)
+    if src in self.matrix:
+      if dst in self.matrix[src]:
+        return self.matrix[src].pop(dst)
 
   def __contains__ (self, item):
     return item in self.matrix

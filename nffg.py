@@ -3054,23 +3054,23 @@ class NFFGToolBox(object):
       if obju.type == NFFG.TYPE_INFRA or obju.type == NFFG.TYPE_SAP:
         # a list of (global_port_id, dist_dict) tuples
         possible_dicts = filter(
-          lambda tup, original_id=u, sep=id_connector_character: original_id ==
-                                                                 tup[0].split(
-                                                                   sep)[
-                                                                   1],
+          lambda tup, original_id=u, sep=id_connector_character:
+          original_id == NFFGToolBox.try_to_convert(tup[0].split(sep)[1]),
           exploded_dists.iteritems())
         for v, objv in G.nodes_iter(data=True):
           if objv.type == NFFG.TYPE_INFRA or objv.type == NFFG.TYPE_SAP:
             possible_ending_nodes = filter(
               lambda portid, original_id=v, sep=id_connector_character:
-              original_id == portid.split(sep)[1],
+              original_id == NFFGToolBox.try_to_convert(portid.split(sep)[1]),
               exploded_dists.iterkeys())
             # now we need to choose the minimum of the possible distances.
             for starting_node, d in possible_dicts:
               for ending_node in possible_ending_nodes:
                 if ending_node in d:
-                  if d[ending_node] < dist[u][v]:
-                    dist[u][v] = d[ending_node]
+                  if d[ending_node] < dist[NFFGToolBox.try_to_convert(u)][
+                    NFFGToolBox.try_to_convert(v)]:
+                    dist[NFFGToolBox.try_to_convert(u)][
+                      NFFGToolBox.try_to_convert(v)] = d[ending_node]
                     min_dist_pairs[u][v] = (starting_node, ending_node)
     # convert defaultdicts to dicts for safety reasons
     for k in dist:
@@ -3115,8 +3115,12 @@ class NFFGToolBox(object):
         for n in path_with_original_node_ids:
           if n != path_with_original_node_ids_no_duplicates[-1]:
             path_with_original_node_ids_no_duplicates.append(n)
-        min_length_paths[original_starting_node][original_ending_node] = \
-          path_with_original_node_ids_no_duplicates
+        path_with_original_node_ids_no_duplicates_str = map(
+          lambda node_id: NFFGToolBox.try_to_convert(node_id),
+          path_with_original_node_ids_no_duplicates)
+        min_length_paths[NFFGToolBox.try_to_convert(original_starting_node)][
+          NFFGToolBox.try_to_convert(original_ending_node)] = \
+          path_with_original_node_ids_no_duplicates_str
 
     # convert embedded default dicts
     for k in min_length_paths:
