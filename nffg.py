@@ -888,11 +888,10 @@ class NFFG(AbstractNFFG):
     
     :return: 
     """
-    return pprint.pformat(dict(infras=[i.id for i in self.infras],
-                               nfs=[n.id for n in self.nfs],
-                               saps=[s.id for s in self.saps],
-                               sg_hops=[h.id for h in self.sg_hops]),
-                          depth=2)
+    return dict(infras=[i.id for i in self.infras],
+                nfs=[n.id for n in self.nfs],
+                saps=[s.id for s in self.saps],
+                sg_hops=[h.id for h in self.sg_hops])
 
   def real_neighbors_iter (self, node):
     """
