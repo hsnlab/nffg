@@ -883,6 +883,17 @@ class NFFG(AbstractNFFG):
                 i.infra_type not in (self.TYPE_INFRA_SDN_SW, self.TYPE_INFRA_EE,
                                      self.TYPE_INFRA_STATIC_EE)]) > 0
 
+  def get_stat (self):
+    """
+    
+    :return: 
+    """
+    return pprint.pformat(dict(infras=[i.id for i in self.infras],
+                               nfs=[n.id for n in self.nfs],
+                               saps=[s.id for s in self.saps],
+                               sg_hops=[h.id for h in self.sg_hops]),
+                          depth=2)
+
   def real_neighbors_iter (self, node):
     """
     Return with an iterator over the id of neighbours of the given Node not
@@ -3033,9 +3044,10 @@ class NFFGToolBox(object):
       if link.type == NFFG.TYPE_LINK_STATIC:
         # if a link delay is None, we should take it as 0ms delay.
         link_delay = link.delay if link.delay is not None else 0.0
-        exploded_G.add_edge(id_connector_character.join((str(link.src.id), str(i))),
-                            id_connector_character.join((str(link.dst.id), str(j))),
-                            key=k, attr_dict={'delay': link_delay})
+        exploded_G.add_edge(
+          id_connector_character.join((str(link.src.id), str(i))),
+          id_connector_character.join((str(link.dst.id), str(j))),
+          key=k, attr_dict={'delay': link_delay})
     return exploded_G
 
   @classmethod
