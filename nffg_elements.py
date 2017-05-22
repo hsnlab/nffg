@@ -1649,9 +1649,10 @@ class Flowrule(Element):
     :return: string representation
     :rtype: str
     """
-    return "%s(match: %s, action: %s, bandwidth: %s, delay: %s, external: %s)" \
-           % (self.__class__.__name__, self.match, self.action, self.bandwidth,
-              self.delay, self.external)
+    return "%s(id:%s, match: %s, action: %s, bandwidth: %s, delay: %s," \
+           " external: %s)" % (self.__class__.__name__, self.id, self.match,
+                               self.action, self.bandwidth, self.delay,
+                               self.external)
 
 
 class InfraPort(Port):
