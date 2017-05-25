@@ -1479,10 +1479,9 @@ class NodeResource(Persistable):
     :return: specific representation
     :rtype: str
     """
-    return "Resources of %s:\ncpu: %s\nmem: %s\nstorage: %s\nbandwidth: " \
-           "%s\ndelay: %s" % (
-             self.__class__.__name__, self.cpu, self.mem, self.storage,
-             self.bandwidth, self.delay)
+    return "Resources of %s: cpu: %s, mem: %s, storage: %s, bandwidth: %s, " \
+           "delay: %s" % (self.__class__.__name__, self.cpu, self.mem,
+                          self.storage, self.bandwidth, self.delay)
 
   def __str__ (self):
     """
