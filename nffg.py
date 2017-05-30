@@ -2352,7 +2352,8 @@ class NFFGToolBox(object):
     return target
 
   @classmethod
-  def _copy_node_type_with_flowrules (cls, type_iter, target, log):
+  def _copy_node_type_with_flowrules (cls, type_iter, target, log,
+                                      copy_shallow=False):
     """
     Copies all element from iterator if it is not in target, and merges their
     port lists.
@@ -2366,7 +2367,7 @@ class NFFGToolBox(object):
     """
     for obj in type_iter:
       if obj.id not in target:
-        c_obj = target.add_node(deepcopy(obj))
+        c_obj = target.add_node(obj if copy_shallow else deepcopy(obj))
         log.debug("Copy NFFG node: %s" % c_obj)
       else:
         for p in obj.ports:
@@ -2379,21 +2380,26 @@ class NFFGToolBox(object):
                         (p.id, obj.id))
               for fr in p.flowrules:
                 if fr.id not in (f.id for f in new_port.flowrules):
-                  new_port.flowrules.append(copy.deepcopy(fr))
+                  new_port.flowrules.append(fr if copy_shallow else
+                                            copy.deepcopy(fr))
           else:
             old_port = target.network.node[obj.id].ports[p.id]
             for fr in p.flowrules:
               if fr.id not in (f.id for f in old_port.flowrules):
-                old_port.flowrules.append(copy.deepcopy(fr))
+                old_port.flowrules.append(fr if copy_shallow else
+                                          copy.deepcopy(fr))
     return target
 
   @classmethod
-  def merge_nffgs (cls, target, new, log=logging.getLogger("UNION")):
+  def merge_nffgs (cls, target, new, log=logging.getLogger("UNION"),
+                   copy_shallow=False):
     """
     Merges new `NFFG` to target `NFFG` keeping all parameters and copying
     port object from new. Comparison is done based on object id, resources and
     requirements are kept unchanged in target.
 
+    :type copy_shallow: If set to True, set only references to the copied
+                        objects instead of deep copies.
     :param target: target NFFG object
     :type target: :class:`NFFG`
     :param new: NFFG object to merge from
@@ -2402,7 +2408,8 @@ class NFFGToolBox(object):
     :rtype: :class:`NFFG`
     """
     # Copy Infras
-    target = cls._copy_node_type_with_flowrules(new.infras, target, log)
+    target = cls._copy_node_type_with_flowrules(new.infras, target, log,
+                                                copy_shallow)
     # Copy NFs
     target = cls._copy_node_type(new.nfs, target, log)
     # Copy SAPs
@@ -2413,7 +2420,7 @@ class NFFGToolBox(object):
       if not target.network.has_edge(u, v, key=link.id):
         src_port = target.network.node[u].ports[link.src.id]
         dst_port = target.network.node[v].ports[link.dst.id]
-        c_link = deepcopy(link)
+        c_link = link if copy_shallow else deepcopy(link)
         c_link.src = src_port
         c_link.dst = dst_port
         target.add_link(src_port=src_port, dst_port=dst_port, link=c_link)
