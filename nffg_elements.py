@@ -1280,6 +1280,7 @@ class Link(Element):
     self.src = src  # mandatory
     # Reference to dst Port object
     self.dst = dst  # mandatory
+    self.constraints = Constraints()
 
   def persist (self):
     """
@@ -1293,6 +1294,9 @@ class Link(Element):
     link['src_port'] = self.src.id
     link['dst_node'] = self.dst.node.id
     link['dst_port'] = self.dst.id
+    constraints = self.constraints.persist()
+    if constraints:
+      link['constraints'] = constraints
     return link
 
   def load (self, data, container=None, *args, **kwargs):
@@ -1315,6 +1319,8 @@ class Link(Element):
       raise RuntimeError("Src not found with params: %s !" % data)
     if self.dst is None:
       raise RuntimeError("Dst not found with params: %s !" % data)
+    if 'constraints' in data:
+      self.constraints.load(data=data['constraints'])
     return self
 
   def __repr__ (self):
