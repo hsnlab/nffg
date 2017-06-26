@@ -1258,7 +1258,7 @@ class Link(Element):
   # Requirement --> virtual link to define constraints between SG elements
   REQUIREMENT = "REQUIREMENT"
 
-  def __init__ (self, src=None, dst=None, type=None, id=None):
+  def __init__ (self, src=None, dst=None, type=None, id=None, constraints=None):
     """
     Init.
 
@@ -1280,7 +1280,10 @@ class Link(Element):
     self.src = src  # mandatory
     # Reference to dst Port object
     self.dst = dst  # mandatory
-    self.constraints = Constraints()
+    if constraints is None:
+      self.constraints = Constraints()
+    else:
+      self.constraints = constraints
 
   def persist (self):
     """
@@ -1577,7 +1580,7 @@ class Flowrule(Element):
   """
 
   def __init__ (self, id=None, match="", action="", bandwidth=None, delay=None,
-                external=False):
+                external=False, constraints=None):
     """
     Init.
 
@@ -1599,6 +1602,11 @@ class Flowrule(Element):
     self.bandwidth = bandwidth
     self.delay = delay
     self.external = external
+    if constraints is None:
+      self.constraints = Constraints()
+    else:
+      import copy
+      self.constraints = copy.deepcopy(constraints)
 
   def persist (self):
     """
@@ -1618,6 +1626,9 @@ class Flowrule(Element):
       flowrule['delay'] = self.delay
     if self.external:
       flowrule['external'] = self.external
+    constraints = self.constraints.persist()
+    if constraints:
+      flowrule['constraints'] = constraints
     return flowrule
 
   def load (self, data, *args, **kwargs):
@@ -1634,6 +1645,8 @@ class Flowrule(Element):
     self.bandwidth = float(data['bandwidth']) if 'bandwidth' in data else None
     self.delay = float(data['delay']) if 'delay' in data else None
     self.external = float(data['external']) if 'external' in data else False
+    if 'constraints' in data:
+      self.constraints.load(data=data['constraints'])
     return self
 
   def __repr__ (self):
@@ -1694,7 +1707,7 @@ class InfraPort(Port):
     self.flowrules = []
 
   def add_flowrule (self, match, action, bandwidth=None, delay=None, id=None,
-                    external=False):
+                    external=False, constraints=None):
     """
     Add a flowrule with the given params to the port of an Infrastructure Node.
 
@@ -1712,7 +1725,7 @@ class InfraPort(Port):
     :rtype: :any:`Flowrule`
     """
     flowrule = Flowrule(id=id, match=match, action=action, bandwidth=bandwidth,
-                        delay=delay, external=external)
+                        delay=delay, external=external, constraints=constraints)
     self.flowrules.append(flowrule)
     return flowrule
 
@@ -2267,7 +2280,7 @@ class EdgeSGLink(Link):
   """
 
   def __init__ (self, src=None, dst=None, id=None, flowclass=None,
-                tag_info=None, delay=None, bandwidth=None):
+                tag_info=None, delay=None, bandwidth=None, constraints=None):
     """
     Init.
 
@@ -2287,7 +2300,8 @@ class EdgeSGLink(Link):
     :type bandwidth: float
     :return: None
     """
-    super(EdgeSGLink, self).__init__(src=src, dst=dst, type=Link.SG, id=id)
+    super(EdgeSGLink, self).__init__(src=src, dst=dst, type=Link.SG, id=id,
+                                     constraints=constraints)
     self.flowclass = flowclass  # flowrule without action
     self.tag_info = tag_info
     self.delay = delay

@@ -627,7 +627,7 @@ class NFFG(AbstractNFFG):
     return p1p2Link, p2p1Link
 
   def add_sglink (self, src_port, dst_port, hop=None, id=None, flowclass=None,
-                  tag_info=None, delay=None, bandwidth=None):
+                  tag_info=None, delay=None, bandwidth=None, constraints=None):
     """
     Add a SG next hop edge to the structure.
 
@@ -652,7 +652,8 @@ class NFFG(AbstractNFFG):
     """
     if hop is None:
       hop = EdgeSGLink(src=src_port, dst=dst_port, id=id, flowclass=flowclass,
-                       tag_info=tag_info, bandwidth=bandwidth, delay=delay)
+                       tag_info=tag_info, bandwidth=bandwidth, delay=delay,
+                       constraints=constraints)
     self.add_edge(src_port.node, dst_port.node, hop)
     return hop
 
@@ -2789,7 +2790,8 @@ class NFFGToolBox(object):
             # The path is unordered!!
             path_of_shop = []
             flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
-            sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay]
+            sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay,
+                             fr.constraints]
             # We have to find the BEGINNING of this flowrule sequence.
             inbound_link = NFFGToolBox._find_infra_link(nffg, p, outbound=False,
                                                         accept_dyn=True)
@@ -2854,12 +2856,13 @@ class NFFGToolBox(object):
     """
     sg_map = NFFGToolBox.get_all_sghop_info(nffg)
     for sg_hop_id, data in sg_map.iteritems():
-      src, dst, flowclass, bandwidth, delay = data
+      src, dst, flowclass, bandwidth, delay, constraints = data
       if not (src and dst):
         continue
       if not nffg.network.has_edge(src.node.id, dst.node.id, key=sg_hop_id):
         nffg.add_sglink(src, dst, id=sg_hop_id, flowclass=flowclass,
-                        bandwidth=bandwidth, delay=delay)
+                        bandwidth=bandwidth, delay=delay,
+                        constraints=constraints)
         # causes unnecesary failures, when bandwidth or delay is missing
         # somewhere
         # else:
