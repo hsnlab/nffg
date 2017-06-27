@@ -2993,12 +2993,14 @@ class NFFGToolBox(object):
     Makes ports of the original graph into the nodes of a new NetworkX graph,
     adds delay values onto edge data. The returned graph can be used by standard
     networkx algorithms.
+    WARNING: if called with a G, which has parallel nodes, the link data will
+    be overriden with one of the parallel links.
     :param id_connector_character: character which is used to concatenate and
             separate port IDs from/to node IDs
     :param G:
     :return:
     """
-    exploded_G = networkx.MultiDiGraph()
+    exploded_G = networkx.DiGraph()
     for id, obj in G.nodes_iter(data=True):
       if obj.type == NFFG.TYPE_INFRA:
         static_ports_of_infra = filter(
@@ -3042,14 +3044,14 @@ class NFFGToolBox(object):
     # all ports are added as nodes, and the links between the ports denoting the
     # shortest paths inside the infra node are added already.
     # Add links connecting infra nodes and SAPs
-    for i, j, k, link in G.edges_iter(data=True, keys=True):
+    for i, j, link in G.edges_iter(data=True):
       if link.type == NFFG.TYPE_LINK_STATIC:
         # if a link delay is None, we should take it as 0ms delay.
         link_delay = link.delay if link.delay is not None else 0.0
         exploded_G.add_edge(
           id_connector_character.join((str(link.src.id), str(i))),
           id_connector_character.join((str(link.dst.id), str(j))),
-          key=k, attr_dict={'delay': link_delay})
+          attr_dict={'delay': link_delay})
     return exploded_G
 
   @classmethod
