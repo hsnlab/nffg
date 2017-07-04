@@ -1070,7 +1070,7 @@ class NFFG(AbstractNFFG):
       # Get all the mapped paths of all SGHops from the NFFG
       sg_map = NFFGToolBox.get_all_sghop_info(self, return_paths=True)
       for sg_hop_id, data in sg_map.iteritems():
-        src, dst, flowclass, bandwidth, delay, path = data
+        src, dst, flowclass, bandwidth, delay, const, path = data
         if bandwidth is not None:
           for link in path:
             link.availbandwidth -= bandwidth

@@ -61,6 +61,16 @@ class Persistable(object):
     """
     return cls().load(data, *args, **kwargs)
 
+  def copy (self):
+    """
+    Return the copy of the object.
+
+    :return: copied object
+    :rtype: :any:`Element`
+    """
+    from copy import deepcopy
+    return deepcopy(self)
+
 
 class Element(Persistable):
   """
@@ -1605,8 +1615,7 @@ class Flowrule(Element):
     if constraints is None:
       self.constraints = Constraints()
     else:
-      import copy
-      self.constraints = copy.deepcopy(constraints)
+      self.constraints = constraints.copy()
 
   def persist (self):
     """
