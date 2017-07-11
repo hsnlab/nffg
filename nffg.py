@@ -1163,6 +1163,30 @@ class NFFGToolBox(object):
     return {infra.domain for infra in nffg.infras}
 
   @staticmethod
+  def reset_inter_domain_property (nffg, log=logging.getLogger("SAP-recreate")):
+    """
+
+    :param nffg:
+    :param log:
+    :return:
+    """
+    log.debug("Check inter-domain port properties...")
+    for u, v, link in nffg.network.edges_iter(data=True):
+      # Inter-domain links are given between Infra nodes
+      if not (nffg[u].type == nffg[v].type == NFFG.TYPE_INFRA):
+        continue
+      sport, dport = link.src, link.dst
+      # SAP attributes are note None and the same
+      if sport.sap == dport.sap is not None:
+        if not (sport.has_property('type') and dport.has_property('type')):
+          log.debug("Found unmarked inter-domain link: %s with SAP id: %s"
+                    % (link.id, sport.sap))
+          link.src.add_property(property='type', value='inter-domain')
+          link.dst.add_property(property='type', value='inter-domain')
+          log.debug(
+            "Mark ports as 'inter-domain': %s, %s" % (link.src, link.dst))
+
+  @staticmethod
   def recreate_inter_domain_SAPs (nffg, log=logging.getLogger("SAP-recreate")):
     """
     Search for possible inter-domain ports examining ports' metadata and
@@ -1532,6 +1556,8 @@ class NFFGToolBox(object):
     if len(domains) == 0:
       log.warning("No domain has been detected!")
       return splitted_parts
+
+    NFFGToolBox.reset_inter_domain_property(nffg=nffg, log=log)
 
     # Checks every domain
     for domain in domains:
