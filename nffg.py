@@ -1235,7 +1235,7 @@ class NFFGToolBox(object):
     return nffg
 
   @staticmethod
-  def trim_orphaned_nodes (nffg, log=logging.getLogger("TRIM")):
+  def trim_orphaned_nodes (nffg, domain=None, log=logging.getLogger("TRIM")):
     """
     Remove orphaned nodes from given :class:`NFFG`.
 
@@ -1252,9 +1252,11 @@ class NFFGToolBox(object):
       detected.add(link.dst.node.id)
     orphaned = {n for n in nffg} - detected
     for node in orphaned:
-      log.warning("Found orphaned node: %s! Remove from sliced part." %
-                  nffg[node])
-      nffg.del_node(node)
+      if domain and nffg[node].type == NFFG.TYPE_INFRA and \
+            nffg[node].domain != domain:
+        log.warning("Found orphaned node: %s! Remove from sliced part." %
+                    nffg[node])
+        nffg.del_node(node)
     if orphaned:
       log.debug("Remained nodes: %s" % [n for n in nffg])
     return nffg
@@ -1571,7 +1573,7 @@ class NFFGToolBox(object):
 
       # Check orphaned or not connected nodes and remove them
       log.debug("Trim orphaned nodes from splitted part...")
-      cls.trim_orphaned_nodes(nffg=nffg_part, log=log)
+      cls.trim_orphaned_nodes(nffg=nffg_part, domain=domain, log=log)
       log.debug("Merge external ports into it's original SAP port...")
       cls.merge_external_ports(nffg=nffg_part, log=log)
     log.info("Splitting has been finished!")
