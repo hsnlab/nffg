@@ -2709,7 +2709,7 @@ class NFFGToolBox(object):
       return flowclass
 
   @staticmethod
-  def _get_flowrule_and_its_starting_port (infra, fr_id):
+  def get_flowrule_and_its_starting_port (infra, fr_id):
     """
     Finds the Flowrule which belongs to the path of SGHop with ID 'fr_id'.
 
@@ -2729,7 +2729,27 @@ class NFFGToolBox(object):
                          % (fr_id, infra.id))
 
   @staticmethod
-  def _get_output_port_of_flowrule (infra, fr):
+  def get_inport_of_flowrule (infra, fr_id):
+    """
+    Finds the Flowrule which belongs to the path of SGHop with ID 'fr_id'.
+
+    :param infra: Infra object where we should look for the Flowrule
+    :type infra: :any:`NodeInfra`
+    :param fr_id: Flowrule/SGHop ID to look for
+    :type fr_id: int
+    :return: Flowrule and its containing InfraPort
+    :rtype: 2-tuple
+    """
+    for p in infra.ports:
+      for fr in p.flowrules:
+        if fr.id == fr_id:
+          return p
+    else:
+      raise RuntimeError("Couldn't find Flowrule for SGHop %s in Infra %s!"
+                         % (fr_id, infra.id))
+
+  @staticmethod
+  def get_output_port_of_flowrule (infra, fr):
     """
     Find the port object where this Flowrule sends the traffic out.
 
@@ -2829,7 +2849,7 @@ class NFFGToolBox(object):
                 break
               # The link is STATIC, and its src is not SAP so it is an Infra.
               prev_fr, prev_p = \
-                NFFGToolBox._get_flowrule_and_its_starting_port(
+                NFFGToolBox.get_flowrule_and_its_starting_port(
                   inbound_link.src.node, fr.id)
               NFFGToolBox._check_flow_consistencity(sg_map, prev_fr)
               inbound_link = NFFGToolBox._find_infra_link(nffg, prev_p,
@@ -2841,7 +2861,7 @@ class NFFGToolBox(object):
             sg_map[fr.id][0] = inbound_link.src
 
             # We have to find the ENDING of this flowrule sequence.
-            output_port = NFFGToolBox._get_output_port_of_flowrule(i, fr)
+            output_port = NFFGToolBox.get_output_port_of_flowrule(i, fr)
             if output_port is None:
               continue
             outbound_link = NFFGToolBox._find_infra_link(nffg, output_port,
@@ -2852,10 +2872,10 @@ class NFFGToolBox(object):
               if outbound_link.dst.node.type == 'SAP':
                 break
               # The link is STATIC and its dst is not a SAP so it is an Infra.
-              next_fr, _ = NFFGToolBox._get_flowrule_and_its_starting_port(
+              next_fr, _ = NFFGToolBox.get_flowrule_and_its_starting_port(
                 outbound_link.dst.node, fr.id)
               # '_' is 'outbound_link.dst'
-              next_output_port = NFFGToolBox._get_output_port_of_flowrule(
+              next_output_port = NFFGToolBox.get_output_port_of_flowrule(
                 outbound_link.dst.node, next_fr)
               NFFGToolBox._check_flow_consistencity(sg_map, next_fr)
               outbound_link = NFFGToolBox._find_infra_link(nffg,
