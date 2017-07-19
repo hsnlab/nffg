@@ -2280,10 +2280,13 @@ class EdgeSGLink(Link):
   """
 
   def __init__ (self, src=None, dst=None, id=None, flowclass=None,
-                tag_info=None, delay=None, bandwidth=None, constraints=None):
+                tag_info=None, delay=None, bandwidth=None, constraints=None,
+                additional_actions=None):
     """
     Init.
 
+    :param additional_actions: not traffic steering actions in a flowrule.
+    :type additional_actions: str
     :param src: source port
     :type src: :any:`Port`
     :param dst: destination port
@@ -2306,6 +2309,7 @@ class EdgeSGLink(Link):
     self.tag_info = tag_info
     self.delay = delay
     self.bandwidth = bandwidth
+    self.additional_actions = additional_actions
 
   def persist (self):
     """
@@ -2323,6 +2327,8 @@ class EdgeSGLink(Link):
       link["delay"] = self.delay
     if self.bandwidth is not None:
       link["bandwidth"] = self.bandwidth
+    if self.additional_actions is not None:
+      link["additional_actions"] = self.additional_actions
     return link
 
   def load (self, data, container=None, *args, **kwargs):
@@ -2345,6 +2351,7 @@ class EdgeSGLink(Link):
     super(EdgeSGLink, self).load(data=data, container=container)
     self.flowclass = data.get('flowclass')
     self.tag_info = data.get('tag_info')
+    self.additional_actions = data.get('additional_actions')
     self.delay = float(data['delay']) if 'delay' in data else None
     self.bandwidth = float(data['bandwidth']) if 'bandwidth' in data else None
     return self
