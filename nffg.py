@@ -627,7 +627,8 @@ class NFFG(AbstractNFFG):
     return p1p2Link, p2p1Link
 
   def add_sglink (self, src_port, dst_port, hop=None, id=None, flowclass=None,
-                  tag_info=None, delay=None, bandwidth=None, constraints=None):
+                  tag_info=None, delay=None, bandwidth=None, constraints=None,
+                  additional_actions=None):
     """
     Add a SG next hop edge to the structure.
 
@@ -653,7 +654,8 @@ class NFFG(AbstractNFFG):
     if hop is None:
       hop = EdgeSGLink(src=src_port, dst=dst_port, id=id, flowclass=flowclass,
                        tag_info=tag_info, bandwidth=bandwidth, delay=delay,
-                       constraints=constraints)
+                       constraints=constraints,
+                       additional_actions=additional_actions)
     self.add_edge(src_port.node, dst_port.node, hop)
     return hop
 
@@ -1070,7 +1072,8 @@ class NFFG(AbstractNFFG):
       # Get all the mapped paths of all SGHops from the NFFG
       sg_map = NFFGToolBox.get_all_sghop_info(self, return_paths=True)
       for sg_hop_id, data in sg_map.iteritems():
-        src, dst, flowclass, bandwidth, delay, const, path = data
+        src, dst, flowclass, bandwidth, delay, constraints, \
+                                        additional_actions, path = data
         if bandwidth is not None:
           for link in path:
             link.availbandwidth -= bandwidth
@@ -2709,7 +2712,34 @@ class NFFGToolBox(object):
       return flowclass
 
   @staticmethod
-  def get_flowrule_and_its_starting_port (infra, fr_id):
+  def _extract_additional_actions (splitted_actions):
+    """
+    Interprets the action field of a flowrule as every action is additional,
+    which are not used for traffic steering such as "UNTAG" and "output"
+    actions. Returns the string to be but into the additional_actions field.
+    :param splitted_actions:
+    :return:
+    """
+    additional_actions = ""
+    for action in splitted_actions:
+      action_2_list = action.split("=", 1)
+      field = action_2_list[0]
+      mparam = ""
+      if len(action_2_list) == 2:
+        mparam = action_2_list[1]
+      if field != "UNTAG" and field != "output" and field != "TAG":
+        # if there is ate least one additional action, they should be
+        # separated by ";"-s.
+        if additional_actions != "":
+          additional_actions += ";"
+        additional_actions += "".join((field, "=", mparam))
+    if additional_actions == "":
+      return None
+    else:
+      return additional_actions
+
+  @staticmethod
+  def _get_flowrule_and_its_starting_port (infra, fr_id):
     """
     Finds the Flowrule which belongs to the path of SGHop with ID 'fr_id'.
 
@@ -2810,13 +2840,14 @@ class NFFGToolBox(object):
   def get_all_sghop_info (nffg, return_paths=False):
     """
     Returns a dictionary keyed by sghopid, data is [PortObjsrc,
-    PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay] list of port
-    objects. Source and destination VNF-s can be retreived from port references
+    PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay, SGHop.constraints,
+    SGHop.additional_action] list of port objects.
+    Source and destination VNF-s can be retreived from port references
     (port.node.id). The function 'recreate_all_sghops' should receive this exact
     NFFG object and the output of this function.
     It is based exclusively on flowrules, flowrule ID-s are equal to the
     corresponding SGHop's ID.
-    If return_paths is set, the 6th element in the dict values is always an
+    If return_paths is set, the last element in the dict values is always an
     unordered list of the STATIC link references, which are used by the flowrule
     sequence. Doesn't change the input NFFG, only returns the SGHop values,
     SGHops are not added.
@@ -2838,8 +2869,10 @@ class NFFGToolBox(object):
             # The path is unordered!!
             path_of_shop = []
             flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
+            additional_action = NFFGToolBox._extract_additional_actions(
+                                            fr.action.split(";"))
             sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay,
-                             fr.constraints]
+                             fr.constraints, additional_action]
             # We have to find the BEGINNING of this flowrule sequence.
             inbound_link = NFFGToolBox._find_infra_link(nffg, p, outbound=False,
                                                         accept_dyn=True)
@@ -2904,13 +2937,15 @@ class NFFGToolBox(object):
     """
     sg_map = NFFGToolBox.get_all_sghop_info(nffg)
     for sg_hop_id, data in sg_map.iteritems():
-      src, dst, flowclass, bandwidth, delay, constraints = data
+      src, dst, flowclass, bandwidth, delay, constraints, \
+                                             additional_actions = data
       if not (src and dst):
         continue
       if not nffg.network.has_edge(src.node.id, dst.node.id, key=sg_hop_id):
         nffg.add_sglink(src, dst, id=sg_hop_id, flowclass=flowclass,
                         bandwidth=bandwidth, delay=delay,
-                        constraints=constraints)
+                        constraints=constraints,
+                        additional_actions=additional_actions)
         # causes unnecesary failures, when bandwidth or delay is missing
         # somewhere
         # else:
