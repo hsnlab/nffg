@@ -2882,7 +2882,7 @@ class NFFGToolBox(object):
                 break
               # The link is STATIC, and its src is not SAP so it is an Infra.
               prev_fr, prev_p = \
-                NFFGToolBox.get_flowrule_and_its_starting_port(
+                NFFGToolBox._get_flowrule_and_its_starting_port(
                   inbound_link.src.node, fr.id)
               NFFGToolBox._check_flow_consistencity(sg_map, prev_fr)
               inbound_link = NFFGToolBox._find_infra_link(nffg, prev_p,
@@ -2905,7 +2905,7 @@ class NFFGToolBox(object):
               if outbound_link.dst.node.type == 'SAP':
                 break
               # The link is STATIC and its dst is not a SAP so it is an Infra.
-              next_fr, _ = NFFGToolBox.get_flowrule_and_its_starting_port(
+              next_fr, _ = NFFGToolBox._get_flowrule_and_its_starting_port(
                 outbound_link.dst.node, fr.id)
               # '_' is 'outbound_link.dst'
               next_output_port = NFFGToolBox.get_output_port_of_flowrule(
