@@ -2732,7 +2732,8 @@ class NFFGToolBox(object):
         # separated by ";"-s.
         if additional_actions != "":
           additional_actions += ";"
-        additional_actions += "".join((field, "=", mparam))
+        additional_actions += field if mparam == "" else \
+                                    "".join((field, "=", mparam))
     if additional_actions == "":
       return None
     else:
