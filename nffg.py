@@ -2999,17 +2999,16 @@ class NFFGToolBox(object):
               # we can delete this tag info from other flowrules of the same
               # flowrule sequence too, because the abstract tag will be used
               # during the mapping.
-              fr.match = fr.match.replace(tag_info_all_sghops[fr.id], ""). \
+              fr.match = fr.match.replace(match_element, "").\
                                   rstrip(";").lstrip(";")
 
     # we need to gather tag_info-s from SGHops too, if flowrules are
-    # not present
-    # , but SGHops are. If both are present, check consistency
+    # not present, but SGHops are. If both are present, check consistency
     # between them.
     for sg in nffg.sg_hops:
       if sg.tag_info is not None:
         if sg.id in tag_info_all_sghops:
-          if tag_info_all_sghops[sg.id][0] != sg.tag_info:
+          if tag_info_all_sghops[sg.id] != sg.tag_info:
             raise RuntimeError(
               "Technology specific interdomain tag info is "
               "inconsistent in SGHop %s tag value: %s and "
@@ -3019,17 +3018,31 @@ class NFFGToolBox(object):
           # add the SGHop's tag_info to the dictionary for later usage.
           tag_info_all_sghops[sg.id] = sg.tag_info
 
-    # we need to add the corresponding untag actions for every tag_info field.
-    for sgid in tag_info_all_sghops:
-      for tag_info, untag_action in zip(possible_tag_infos, untag_actions):
-        if tag_info in tag_info_all_sghops[sgid]:
-          tag_info_all_sghops[sgid] = (tag_info_all_sghops[sgid], untag_action)
+      # we need to check whether any tag_info is already included in flowclass
+      # field, if so, we need to delete it, because from now on, we take care
+      # of this field of the match.
+      if sg.flowclass is not None:
+        sg.flowclass = sg.flowclass.replace(tag_info_all_sghops[sg.id],
+                                            "").rstrip(";").lstrip(";")
+        # if the flowclass disappears, let's set it back to None
+        if sg.flowclass == "":
+          sg.flowclass = None
 
-          # delete the possibly present untag action from the additional
-          # actions, from now on, we take care of that.
-          if sg.additional_actions is not None:
-              sg.additional_actions.replace(untag_action, "").\
-                                    rstrip(";").lstrip(";")
+    # we need to add the corresponding untag actions for every tag_info field.
+    for sg in nffg.sg_hops:
+      if sg.id in tag_info_all_sghops:
+        for tag_info, untag_action in zip(possible_tag_infos, untag_actions):
+          if tag_info in tag_info_all_sghops[sg.id]:
+            tag_info_all_sghops[sg.id] = (tag_info_all_sghops[sg.id], untag_action)
+
+            # delete the possibly present untag action from the additional
+            # actions, from now on, we take care of that.
+            if sg.additional_actions is not None:
+              sg.additional_actions = sg.additional_actions.\
+                                replace(untag_action, "").rstrip(";").lstrip(";")
+              # if there are no additional actions left, change it back to None
+              if sg.additional_actions == "":
+                sg.additional_actions = None
 
     return tag_info_all_sghops
 
