@@ -3021,7 +3021,7 @@ class NFFGToolBox(object):
       # we need to check whether any tag_info is already included in flowclass
       # field, if so, we need to delete it, because from now on, we take care
       # of this field of the match.
-      if sg.flowclass is not None:
+      if sg.flowclass is not None and sg.id in tag_info_all_sghops:
         sg.flowclass = sg.flowclass.replace(tag_info_all_sghops[sg.id],
                                             "").rstrip(";").lstrip(";")
         # if the flowclass disappears, let's set it back to None
