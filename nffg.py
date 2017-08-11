@@ -2963,6 +2963,8 @@ class NFFGToolBox(object):
     This info is gathered for all incoming flowrule sequences and returned in
     a dictionary keyed by the flowrule ID/SGHop ID. The gathered tags are
     deleted from all encountered flowrules (thus the input NFFG is modified).
+    Tag info is also gathered from SGHops to the dictionary and consistency
+    is checked if needed.
     :param nffg:
     :return: dict indexed by flowrule ID.
     """
@@ -2999,11 +3001,36 @@ class NFFGToolBox(object):
               # during the mapping.
               fr.match = fr.match.replace(tag_info_all_sghops[fr.id], ""). \
                                   rstrip(";").lstrip(";")
+
+    # we need to gather tag_info-s from SGHops too, if flowrules are
+    # not present
+    # , but SGHops are. If both are present, check consistency
+    # between them.
+    for sg in nffg.sg_hops:
+      if sg.tag_info is not None:
+        if sg.id in tag_info_all_sghops:
+          if tag_info_all_sghops[sg.id][0] != sg.tag_info:
+            raise RuntimeError(
+              "Technology specific interdomain tag info is "
+              "inconsistent in SGHop %s tag value: %s and "
+              "one of its flowrules with tag value %s" %
+              (sg, sg.tag_info, tag_info_all_sghops[sg.id]))
+        else:
+          # add the SGHop's tag_info to the dictionary for later usage.
+          tag_info_all_sghops[sg.id] = sg.tag_info
+
     # we need to add the corresponding untag actions for every tag_info field.
     for sgid in tag_info_all_sghops:
       for tag_info, untag_action in zip(possible_tag_infos, untag_actions):
         if tag_info in tag_info_all_sghops[sgid]:
           tag_info_all_sghops[sgid] = (tag_info_all_sghops[sgid], untag_action)
+
+          # delete the possibly present untag action from the additional
+          # actions, from now on, we take care of that.
+          if sg.additional_actions is not None:
+              sg.additional_actions.replace(untag_action, "").\
+                                    rstrip(";").lstrip(";")
+
     return tag_info_all_sghops
 
   @staticmethod
