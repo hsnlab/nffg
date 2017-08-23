@@ -1003,6 +1003,19 @@ class NFFG(AbstractNFFG):
     bb = [bb for bb in self.infra_neighbors(nf_id)]
     return bb.pop().domain if len(bb) == 1 else None
 
+  def strip (self):
+    """
+    Remove all NF and Flowrule from NFFG.
+
+    :return: striped NFFG
+    """
+    nfs = [nf for nf in self.nfs]
+    for nf in nfs:
+      self.del_node(node=nf)
+    for node in self.infras:
+      for port in node.ports:
+        port.clear_flowrules()
+
   def clear_links (self, link_type):
     """
     Remove every specific Link from the NFFG defined by given ``type``.
@@ -1073,7 +1086,7 @@ class NFFG(AbstractNFFG):
       sg_map = NFFGToolBox.get_all_sghop_info(self, return_paths=True)
       for sg_hop_id, data in sg_map.iteritems():
         src, dst, flowclass, bandwidth, delay, constraints, \
-                                        additional_actions, path = data
+        additional_actions, path = data
         if bandwidth is not None:
           for link in path:
             link.availbandwidth -= bandwidth
@@ -2733,7 +2746,7 @@ class NFFGToolBox(object):
         if additional_actions != "":
           additional_actions += ";"
         additional_actions += field if mparam == "" else \
-                                    "".join((field, "=", mparam))
+          "".join((field, "=", mparam))
     if additional_actions == "":
       return None
     else:
@@ -2841,7 +2854,8 @@ class NFFGToolBox(object):
   def get_all_sghop_info (nffg, return_paths=False):
     """
     Returns a dictionary keyed by sghopid, data is [PortObjsrc,
-    PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay, SGHop.constraints,
+    PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay,
+    SGHop.constraints,
     SGHop.additional_action] list of port objects.
     Source and destination VNF-s can be retreived from port references
     (port.node.id). The function 'recreate_all_sghops' should receive this exact
@@ -2871,7 +2885,7 @@ class NFFGToolBox(object):
             path_of_shop = []
             flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
             additional_action = NFFGToolBox._extract_additional_actions(
-                                            fr.action.split(";"))
+              fr.action.split(";"))
             sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay,
                              fr.constraints, additional_action]
             # We have to find the BEGINNING of this flowrule sequence.
@@ -2939,7 +2953,7 @@ class NFFGToolBox(object):
     sg_map = NFFGToolBox.get_all_sghop_info(nffg)
     for sg_hop_id, data in sg_map.iteritems():
       src, dst, flowclass, bandwidth, delay, constraints, \
-                                             additional_actions = data
+      additional_actions = data
       if not (src and dst):
         continue
       if not nffg.network.has_edge(src.node.id, dst.node.id, key=sg_hop_id):
