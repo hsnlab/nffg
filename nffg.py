@@ -2969,6 +2969,98 @@ class NFFGToolBox(object):
     return nffg
 
   @staticmethod
+  def retrieve_and_purge_all_tag_info (nffg):
+    """
+    Searches all match fields of all flowrules for some possible tag values,
+    which may come from inter domain traffic steering and may use technology
+    specific tagging for a neighbouring domain.
+    This info is gathered for all incoming flowrule sequences and returned in
+    a dictionary keyed by the flowrule ID/SGHop ID. The gathered tags are
+    deleted from all encountered flowrules (thus the input NFFG is modified).
+    Tag info is also gathered from SGHops to the dictionary and consistency
+    is checked if needed.
+    :param nffg:
+    :return: dict indexed by flowrule ID.
+    """
+    # the set of tags which shall be considered. Possibly needed to modify!
+    possible_tag_infos = ("dl_vlan", "mpls_label")
+    # WARNING: we can't differentiate ethertypes based only on the presence of
+    # mpls_label, other fields should be processed too. But only one layer of
+    # MLPS is supported in OVS currently, whose format we use in Flowrules
+    untag_actions = ("strip_vlan", "pop_mpls:0x8847")
+    tag_info_all_sghops = {}
+    for infra in nffg.infras:
+      for fr in infra.flowrules():
+        for match_element in fr.match.split(";"):
+          match_element_splitted = match_element.split("=")
+          if len(match_element_splitted) == 2:
+            if match_element_splitted[0] in possible_tag_infos:
+              if fr.id not in tag_info_all_sghops:
+                # save the tag_info
+                tag_info_all_sghops[fr.id] = match_element
+              elif tag_info_all_sghops[fr.id] != match_element:
+                # we have found another flowrule which has a different
+                # possible_tag_info.
+                raise RuntimeError(
+                  "The flowrule sequence of flowrule %s in infra %s has "
+                  "multiple match fields "
+                  "which may be used for interdomain traffic steering ("
+                  "%s) so it cannot be decided which one to use." %
+                  (fr, infra.id, possible_tag_infos))
+              # delete this match element from the match of the flowrule
+              # and the ; separators too, in case they are left on the
+              # beginning or ending.
+              # we can delete this tag info from other flowrules of the same
+              # flowrule sequence too, because the abstract tag will be used
+              # during the mapping.
+              fr.match = fr.match.replace(match_element, "").\
+                                  rstrip(";").lstrip(";")
+
+    # we need to gather tag_info-s from SGHops too, if flowrules are
+    # not present, but SGHops are. If both are present, check consistency
+    # between them.
+    for sg in nffg.sg_hops:
+      if sg.tag_info is not None:
+        if sg.id in tag_info_all_sghops:
+          if tag_info_all_sghops[sg.id] != sg.tag_info:
+            raise RuntimeError(
+              "Technology specific interdomain tag info is "
+              "inconsistent in SGHop %s tag value: %s and "
+              "one of its flowrules with tag value %s" %
+              (sg, sg.tag_info, tag_info_all_sghops[sg.id]))
+        else:
+          # add the SGHop's tag_info to the dictionary for later usage.
+          tag_info_all_sghops[sg.id] = sg.tag_info
+
+      # we need to check whether any tag_info is already included in flowclass
+      # field, if so, we need to delete it, because from now on, we take care
+      # of this field of the match.
+      if sg.flowclass is not None and sg.id in tag_info_all_sghops:
+        sg.flowclass = sg.flowclass.replace(tag_info_all_sghops[sg.id],
+                                            "").rstrip(";").lstrip(";")
+        # if the flowclass disappears, let's set it back to None
+        if sg.flowclass == "":
+          sg.flowclass = None
+
+    # we need to add the corresponding untag actions for every tag_info field.
+    for sg in nffg.sg_hops:
+      if sg.id in tag_info_all_sghops:
+        for tag_info, untag_action in zip(possible_tag_infos, untag_actions):
+          if tag_info in tag_info_all_sghops[sg.id]:
+            tag_info_all_sghops[sg.id] = (tag_info_all_sghops[sg.id], untag_action)
+
+            # delete the possibly present untag action from the additional
+            # actions, from now on, we take care of that.
+            if sg.additional_actions is not None:
+              sg.additional_actions = sg.additional_actions.\
+                                replace(untag_action, "").rstrip(";").lstrip(";")
+              # if there are no additional actions left, change it back to None
+              if sg.additional_actions == "":
+                sg.additional_actions = None
+
+    return tag_info_all_sghops
+
+  @staticmethod
   def redirect_flowrules (from_port, to_port, infra, mark_external=False,
                           log=logging.getLogger("MOVE")):
     """
