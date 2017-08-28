@@ -3054,8 +3054,9 @@ class NFFGToolBox(object):
     """
     Return true if there is a Static outbound or inbound EdgeLink, false if 
     there
-    is a Dynamic outbound or inbound link, throws exception if borth, or warning
+    is a Dynamic outbound or inbound link, throws exception if both, or warning
     if multiple of the same type.
+
     :param G:
     :param p:
     :return:
@@ -3092,9 +3093,10 @@ class NFFGToolBox(object):
     adds delay values onto edge data. The returned graph can be used by standard
     networkx algorithms.
     WARNING: if called with a G, which has parallel nodes, the link data will
-    be overriden with one of the parallel links.
+    be overridden with one of the parallel links.
+
     :param id_connector_character: character which is used to concatenate and
-            separate port IDs from/to node IDs
+      separate port IDs from/to node IDs
     :param G:
     :return:
     """
