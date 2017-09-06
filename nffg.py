@@ -648,6 +648,10 @@ class NFFG(AbstractNFFG):
     :type delay: float
     :param bandwidth: bandwidth requested on link
     :type bandwidth: float
+    :param constraints: optional Constraints object
+    :type constraints: :class:`Constraints`
+    :param additional_actions: additional actions
+    :type additional_actions: str
     :return: newly created edge
     :rtype: :any:`EdgeSGLink`
     """
@@ -1007,7 +1011,8 @@ class NFFG(AbstractNFFG):
     """
     Remove all NF and Flowrule from NFFG.
 
-    :return: striped NFFG
+    :return: stripped NFFG
+    :rtype: :class:`NFFG`
     """
     nfs = [nf for nf in self.nfs]
     for nf in nfs:
@@ -1075,7 +1080,7 @@ class NFFG(AbstractNFFG):
         for p in d.ports:
           for fr in p.flowrules:
             if fr.id not in sg_hops_to_be_ignored and fr.bandwidth is not None:
-              # Flowrules are cummulatively subtracted from the switching 
+              # Flowrules are cumulatively subtracted from the switching
               # capacity of the node.
               d.availres['bandwidth'] -= fr.bandwidth
               if d.availres['bandwidth'] < 0:
@@ -1095,7 +1100,7 @@ class NFFG(AbstractNFFG):
                 "The link bandwidth of %s got below zero during"
                 "available resource calculation!" % link.id)
 
-  def calculate_available_node_res (self, vnfs_to_be_left_in_place={},
+  def calculate_available_node_res (self, vnfs_to_be_left_in_place=None,
                                     mode=MODE_ADD):
     """
     Calculates available computation and networking resources of the nodes of
@@ -1109,6 +1114,8 @@ class NFFG(AbstractNFFG):
     """
     # add available res attribute to all Infras and subtract the running
     # NFs` resources from the given max res
+    if vnfs_to_be_left_in_place is None:
+      vnfs_to_be_left_in_place = {}
     for n in self.infras:
       setattr(self.network.node[n.id], 'availres',
               copy.deepcopy(self.network.node[n.id].resources))
@@ -1181,10 +1188,14 @@ class NFFGToolBox(object):
   @staticmethod
   def reset_inter_domain_property (nffg, log=logging.getLogger("SAP-recreate")):
     """
+    Check infra links and reset inter-domain properties of related ports if
+    needed.
 
-    :param nffg:
-    :param log:
-    :return:
+    :param nffg: topology
+    :type nffg: :class:`NFFG`
+    :param log: additional logger
+    :type log: :any:`logging.Logger`
+    :return: None
     """
     log.debug("Check inter-domain port properties...")
     for u, v, link in nffg.network.edges_iter(data=True):
@@ -1281,6 +1292,8 @@ class NFFGToolBox(object):
 
     :param nffg: observed NFFG
     :type nffg: :class:`NFFG`
+    :param domain: domain name
+    :type domain: str
     :param log: additional logger
     :type log: :any:`logging.Logger`
     :return: trimmed NFFG
@@ -1382,51 +1395,6 @@ class NFFGToolBox(object):
         domain_port_nffg = base.network.node[n_id].ports[p_id]
         sap_port_nffg = n_links[0].src
         log.debug("Found inter-domain port: %s" % domain_port_nffg)
-
-        # # If the two resource value does not match
-        # if sap_port_dov.delay != sap_port_nffg.delay:
-        #   if sap_port_dov.delay is None:
-        #     # If first is None the other can not be None
-        #     s_delay = sap_port_nffg.delay
-        #   elif sap_port_nffg.delay is None:
-        #     # If second is None the other can not be None
-        #     s_delay = sap_port_dov.delay
-        #   else:
-        #     # Both values are valid, but different
-        #     s_delay = max(sap_port_dov.delay, sap_port_nffg.delay)
-        #     log.warning(
-        #       "Inter-domain delay values (%s, %s) are set but do not match!"
-        #       " Use max: %s" % (sap_port_dov.delay, sap_port_nffg.delay,
-        #                         s_delay))
-        # else:
-        #   # Both value match: ether valid values or Nones --> choose first
-        # value
-        #   s_delay = sap_port_dov.delay
-        #
-        # # If the two resource value does not match
-        # if sap_port_dov.bandwidth != sap_port_nffg.bandwidth:
-        #   if sap_port_dov.bandwidth is None:
-        #     # If first is None the other can not be None
-        #     s_bandwidth = sap_port_nffg.bandwidth
-        #   elif sap_port_nffg.bandwidth is None:
-        #     # If second is None the other can not be None
-        #     s_bandwidth = sap_port_dov.bandwidth
-        #   else:
-        #     # Both values are valid, but different
-        #     s_bandwidth = min(sap_port_dov.bandwidth,
-        #                       sap_port_nffg.bandwidth)
-        #     log.warning(
-        #       "Inter-domain bandwidth values (%s, %s) are set but do not
-        # match!"
-        #       " Use min: %s" % (sap_port_dov.bandwidth,
-        #                         sap_port_nffg.bandwidth, s_bandwidth))
-        # else:
-        #   # Both value match: ether valid values or Nones --> choose first
-        # value
-        #   s_bandwidth = sap_port_dov.bandwidth
-        #
-        # log.debug("Detected inter-domain resource values: delay: %s, "
-        #           "bandwidth: %s" % (s_delay, s_bandwidth))
 
         # Copy inter-domain port properties/values for redundant storing
         if len(domain_port_nffg.properties) > 0:
@@ -1623,6 +1591,18 @@ class NFFGToolBox(object):
 
   @classmethod
   def split_nfs_by_domain (cls, nffg, nfs=None, log=logging.getLogger('SPLIT')):
+    """
+    Split the given NF IDs based on domains defined in given NFFG.
+
+    :param nffg: base NFFG
+    :type nffg: :class:`class`
+    :param nfs: collection of NF Ids
+    :type nfs: list or set
+    :param log: additional logger
+    :type log: :any:`logging.Logger`
+    :return: splitted NF IDs
+    :rtype: dict
+    """
     if nfs is None:
       nfs = [nfs.id for nfs in nffg.nfs]
     log.debug("Splitting nfs: %s by domains..." % nfs)
@@ -2313,16 +2293,6 @@ class NFFGToolBox(object):
                       "Skip flowrule status update in this Port..."
                       % (port.id, infra_id))
           continue
-        # updated_frs = {f.id for f in
-        #                updated[infra_id].ports[port.id].flowrules}
-        # for fr in base[infra_id].ports[port.id].flowrules:
-        #   if fr.id not in updated_frs:
-        #     log.warning("Flowrule: %s is not in the updated NFFG! "
-        #                 "Skip flowrule status update..." % fr)
-        #     continue
-        #   for f in updated[infra_id].ports[port.id].flowrules:
-        #     if f.id == fr.id:
-        #       fr.status = f.status
         for fr in base[infra_id].ports[port.id].flowrules:
           changed = False
           for ufr in updated[infra_id].ports[port.id].flowrules:
@@ -2474,6 +2444,8 @@ class NFFGToolBox(object):
     :type type_iter: :any: iterator on `Node`
     :param target: The target NFFG
     :type target: :any: `NFFG`
+    :param log: additional logger
+    :type log: :any:`logging.Logger`
     :return: the updated base NFFG
     :rtype: :class:`NFFG`
     """
@@ -2511,6 +2483,8 @@ class NFFGToolBox(object):
     :type target: :class:`NFFG`
     :param new: NFFG object to merge from
     :type new: :class:`NFFG`
+    :param log: additional logger
+    :type log: :any:`logging.Logger`
     :return: the updated base NFFG
     :rtype: :class:`NFFG`
     """
@@ -2547,6 +2521,10 @@ class NFFGToolBox(object):
     :type minuend: :class:`NFFG`
     :param subtrahend: NFFG object to be subtracted
     :type subtrahend: :class:`NFFG`
+    :param consider_vnf_status: consider VNF status
+    :type consider_vnf_status: bool
+    :param ignore_infras: ignore infra nodes
+    :type ignore_infras: bool
     :return: NFFG which is minuend \ subtrahend
     :rtype: :class:`NFFG`
     """
@@ -2570,8 +2548,8 @@ class NFFGToolBox(object):
                                              minuend.network.node[n].status):
             for edge_func in (minuend.network.in_edges_iter,
                               minuend.network.out_edges_iter):
-              for i, j, d in edge_func([n], data=True):
-                if d.type == 'SG':
+              for i, j, data in edge_func([n], data=True):
+                if data.type == 'SG':
                   minuend.del_flowrules_of_SGHop(d.id)
             minuend.del_node(minuend.network.node[n])
     for i, j, k, d in subtrahend.network.edges_iter(keys=True, data=True):
@@ -2595,6 +2573,8 @@ class NFFGToolBox(object):
     :type old: :class:`NFFG`
     :param new: NFFG object of the new config
     :type new: :class:`NFFG`
+    :param ignore_infras: ignore infra nodes
+    :type ignore_infras: bool
     :return: a tuple of NFFG-s for addition and deletion resp. on old config.
     :rtype: tuple
     """
@@ -2657,7 +2637,6 @@ class NFFGToolBox(object):
     :return: found static link or None
     :rtype: :any:`Link`
     """
-    edges_func = None
     link = None
     if outbound:
       edges_func = nffg.network.out_edges_iter
@@ -2675,7 +2654,7 @@ class NFFGToolBox(object):
             raise RuntimeError("InfraPort %s has more than one inbound "
                                "links!" % port.id)
           link = d
-    if link == None:
+    if link is None:
       raise RuntimeError(" ".join(("Dynamic" if accept_dyn else "Static",
                                    "outbound" if outbound else "inbound",
                                    "link couldnt be found connected to port",
@@ -2730,8 +2709,11 @@ class NFFGToolBox(object):
     Interprets the action field of a flowrule as every action is additional,
     which are not used for traffic steering such as "UNTAG" and "output"
     actions. Returns the string to be but into the additional_actions field.
-    :param splitted_actions:
-    :return:
+
+    :param splitted_actions: elements of the action fields
+    :type splitted_actions: list
+    :return: additional actions
+    :rtype: str
     """
     additional_actions = ""
     for action in splitted_actions:
@@ -2762,7 +2744,7 @@ class NFFGToolBox(object):
     :param fr_id: Flowrule/SGHop ID to look for
     :type fr_id: int
     :return: Flowrule and its containing InfraPort
-    :rtype: 2-tuple
+    :rtype: tuple
     """
     for p in infra.ports:
       for fr in p.flowrules:
@@ -2782,7 +2764,7 @@ class NFFGToolBox(object):
     :param fr_id: Flowrule/SGHop ID to look for
     :type fr_id: int
     :return: Flowrule and its containing InfraPort
-    :rtype: 2-tuple
+    :rtype: tuple
     """
     for p in infra.ports:
       for fr in p.flowrules:
@@ -2799,6 +2781,8 @@ class NFFGToolBox(object):
 
     :param infra: Infra object where we should look for the InfraPort.
     :type infra: :any:`NodeInfra`
+    :param fr: flowrule object
+    :type fr: :class:`Flowrule`
     :return: The output infra port.
     :rtype: :any:`InfraPort`
     """
@@ -2815,13 +2799,19 @@ class NFFGToolBox(object):
                          " in Infra%s!" % (fr.id, infra.id))
 
   @staticmethod
-  def _check_flow_consistencity (sg_map, fr_sg):
+  def _check_flow_consistency (sg_map, fr_sg):
     """
-    Checks whether there is an inconsistencity with Flowrule or SGHop 'fr_sg'
+    Checks whether there is an inconsistency with Flowrule or SGHop 'fr_sg'
     and the other flowrules which are part of the SGHop's sequence OR SGHop
     which is in sg_map. Throws runtime exception if error found.
     Uses only the common fields of Flowrules and SGHops.
     'flowclass' needs to be extracted if 'fr_sg' is not an SGHop.
+
+    :param sg_map: SGHop sequence
+    :type sg_map: dict
+    :param fr_sg: checked flowentry or SGhop
+    :type fr_sg: :class:`Flowrule` or :class:`EdgeSGLink`
+    :return: None
     """
     if isinstance(fr_sg, Flowrule):
       flowclass = NFFGToolBox._extract_flowclass(fr_sg.match.split(";"))
@@ -2857,7 +2847,7 @@ class NFFGToolBox(object):
     PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay,
     SGHop.constraints,
     SGHop.additional_action] list of port objects.
-    Source and destination VNF-s can be retreived from port references
+    Source and destination VNF-s can be retrieved from port references
     (port.node.id). The function 'recreate_all_sghops' should receive this exact
     NFFG object and the output of this function.
     It is based exclusively on flowrules, flowrule ID-s are equal to the
@@ -2870,7 +2860,7 @@ class NFFGToolBox(object):
     :param nffg: the processed NFFG object
     :type nffg: :class:`NFFG`
     :param return_paths: flag for returning paths
-    :type returning: bool
+    :type return_paths: bool
     :return: extracted values
     :rtype: dict
     """
@@ -2899,7 +2889,7 @@ class NFFGToolBox(object):
               prev_fr, prev_p = \
                 NFFGToolBox._get_flowrule_and_its_starting_port(
                   inbound_link.src.node, fr.id)
-              NFFGToolBox._check_flow_consistencity(sg_map, prev_fr)
+              NFFGToolBox._check_flow_consistency(sg_map, prev_fr)
               inbound_link = NFFGToolBox._find_infra_link(nffg, prev_p,
                                                           outbound=False,
                                                           accept_dyn=True)
@@ -2925,7 +2915,7 @@ class NFFGToolBox(object):
               # '_' is 'outbound_link.dst'
               next_output_port = NFFGToolBox.get_output_port_of_flowrule(
                 outbound_link.dst.node, next_fr)
-              NFFGToolBox._check_flow_consistencity(sg_map, next_fr)
+              NFFGToolBox._check_flow_consistency(sg_map, next_fr)
               outbound_link = NFFGToolBox._find_infra_link(nffg,
                                                            next_output_port,
                                                            outbound=True,
@@ -2961,7 +2951,7 @@ class NFFGToolBox(object):
                         bandwidth=bandwidth, delay=delay,
                         constraints=constraints,
                         additional_actions=additional_actions)
-        # causes unnecesary failures, when bandwidth or delay is missing
+        # causes unnecessary failures, when bandwidth or delay is missing
         # somewhere
         # else:
         #    sg_hop = nffg.network[src.node.id][dst.node.id][sg_hop_id]
@@ -2979,8 +2969,11 @@ class NFFGToolBox(object):
     deleted from all encountered flowrules (thus the input NFFG is modified).
     Tag info is also gathered from SGHops to the dictionary and consistency
     is checked if needed.
-    :param nffg:
+
+    :param nffg: base NFFG
+    :type nffg: :class:`NFFG`
     :return: dict indexed by flowrule ID.
+    :rtype: dict
     """
     # the set of tags which shall be considered. Possibly needed to modify!
     possible_tag_infos = ("dl_vlan", "mpls_label")
@@ -3013,8 +3006,8 @@ class NFFGToolBox(object):
               # we can delete this tag info from other flowrules of the same
               # flowrule sequence too, because the abstract tag will be used
               # during the mapping.
-              fr.match = fr.match.replace(match_element, "").\
-                                  rstrip(";").lstrip(";")
+              fr.match = fr.match.replace(match_element, ""). \
+                rstrip(";").lstrip(";")
 
     # we need to gather tag_info-s from SGHops too, if flowrules are
     # not present, but SGHops are. If both are present, check consistency
@@ -3047,13 +3040,14 @@ class NFFGToolBox(object):
       if sg.id in tag_info_all_sghops:
         for tag_info, untag_action in zip(possible_tag_infos, untag_actions):
           if tag_info in tag_info_all_sghops[sg.id]:
-            tag_info_all_sghops[sg.id] = (tag_info_all_sghops[sg.id], untag_action)
+            tag_info_all_sghops[sg.id] = (
+              tag_info_all_sghops[sg.id], untag_action)
 
             # delete the possibly present untag action from the additional
             # actions, from now on, we take care of that.
             if sg.additional_actions is not None:
-              sg.additional_actions = sg.additional_actions.\
-                                replace(untag_action, "").rstrip(";").lstrip(";")
+              sg.additional_actions = sg.additional_actions. \
+                replace(untag_action, "").rstrip(";").lstrip(";")
               # if there are no additional actions left, change it back to None
               if sg.additional_actions == "":
                 sg.additional_actions = None
@@ -3149,9 +3143,12 @@ class NFFGToolBox(object):
     is a Dynamic outbound or inbound link, throws exception if both, or warning
     if multiple of the same type.
 
-    :param G:
-    :param p:
-    :return:
+    :param G: raw networkx graph object
+    :type G: :class:`MultiDiGraph`
+    :param p: port object
+    :type p: :class:`Port`
+    :return: whether the checked port is static Infra Port
+    :rtype: bool
     """
     static_link_found = False
     dynamic_link_found = False
@@ -3189,19 +3186,22 @@ class NFFGToolBox(object):
 
     :param id_connector_character: character which is used to concatenate and
       separate port IDs from/to node IDs
-    :param G:
-    :return:
+    :type id_connector_character: str
+    :param G: raw networkx graph object
+    :type G: :class:`DiGraph`
+    :return: created graph object
+    :rtype: :class:`DiGraph`
     """
     exploded_G = networkx.DiGraph()
     for id, obj in G.nodes_iter(data=True):
       if obj.type == NFFG.TYPE_INFRA:
         static_ports_of_infra = filter(
-          lambda p, graph=G: NFFGToolBox.isStaticInfraPort(G, p),
+          lambda pp, graph=G: NFFGToolBox.isStaticInfraPort(G, pp),
           obj.ports)
         # NOTE: obj.id == p.node.id because of iterating on obj.ports
         static_ports_of_infra_global_ids = map(
-          lambda p, c=id_connector_character: id_connector_character.join(
-            (str(p.id), str(p.node.id))), static_ports_of_infra)
+          lambda pp, c=id_connector_character: id_connector_character.join(
+            (str(pp.id), str(pp.node.id))), static_ports_of_infra)
         exploded_G.add_nodes_from(static_ports_of_infra_global_ids)
         if type(obj.resources.delay) == type(dict):
           # delay is dict of dicts storing the directed distances between ports
@@ -3251,9 +3251,16 @@ class NFFGToolBox(object):
     """
     Extracts the shortest path length matrix from the calculation result on the
     exploded graph structure.
-    :param exploded_dists:
-    :param id_connector_character:
-    :return:
+
+    :param G: raw networkx graph object
+    :type G: :class:`DiGraph`
+    :param exploded_dists: exploded graph structure
+    :type exploded_dists: dict
+    :param id_connector_character: character which is used to concatenate and
+      separate port IDs from/to node IDs
+    :type id_connector_character: str
+    :return: shortest path length matrix in 2 dict
+    :rtype: tuple
     """
     dist = defaultdict(lambda: defaultdict(lambda: float('inf')))
     min_dist_pairs = defaultdict(lambda: defaultdict(lambda: None))
@@ -3280,7 +3287,7 @@ class NFFGToolBox(object):
                     dist[NFFGToolBox.try_to_convert(u)][
                       NFFGToolBox.try_to_convert(v)] = d[ending_node]
                     min_dist_pairs[u][v] = (starting_node, ending_node)
-    # convert defaultdicts to dicts for safety reasons
+    # convert default dicts to dicts for safety reasons
     for k in dist:
       dist[k] = dict(dist[k])
     for k in min_dist_pairs:
@@ -3292,12 +3299,17 @@ class NFFGToolBox(object):
                                 id_connector_character):
     """
     Extracts and transforms paths from the matrix of shortest paths 
-    calculated on
-    the exploded graph structure.
-    :param exploded_paths_dict:
-    :param min_dist_pairs:
-    :param id_connector_character:
-    :return:
+    calculated on the exploded graph structure.
+
+    :param exploded_paths_dict: exploded paths
+    :type exploded_paths_dict: dict
+    :param min_dist_pairs: minimal distance pairs
+    :type min_dist_pairs:
+    :param id_connector_character: character which is used to concatenate and
+      separate port IDs from/to node IDs
+    :type id_connector_character: str
+    :return: extracted paths
+    :rtype: dict
     """
     min_length_paths = defaultdict(lambda: defaultdict(lambda: None))
     for original_starting_node, d in min_dist_pairs.iteritems():
@@ -3342,9 +3354,16 @@ class NFFGToolBox(object):
     Calculates shortest pased considering latencies between Infra node ports.
     Uses only the infrastructure part of an NFFG, non Infra nodes doesn't have
     internal forwarding latencies.
-    :param G:
-    :param return_paths:
-    :return:
+
+    :param G: raw networkx graph object
+    :type G: :class:`DiGraph`
+    :param return_paths: whether return with path
+    :type return_paths: bool
+    :param id_connector_character: character which is used to concatenate and
+      separate port IDs from/to node IDs
+    :type id_connector_character: str
+    :return: shortest path and optionally the extracted path
+    :rtype: dict or tuple
     """
     exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G,
                                                        id_connector_character)

@@ -949,6 +949,9 @@ class Constraints(Persistable):
   """
 
   def __init__ (self):
+    """
+    Init.
+    """
     super(Constraints, self).__init__()
     self.affinity = {}
     self.antiaffinity = {}
@@ -956,46 +959,156 @@ class Constraints(Persistable):
     self.constraint = {}
 
   def add_affinity (self, id, value):
+    """
+    Set affinity value.
+
+    :param id: unique ID
+    :type id: str or int
+    :param value: new value
+    :type value: str or int
+    :return: new value
+    :rtype: str or int
+    """
     self.affinity[id] = value
     return value
 
   def has_affinity (self, id):
+    """
+    Return True if affinity value with id is exist.
+
+    :param id: unique ID
+    :type id: str or int
+    :return: value exits or not
+    :rtype: bool
+    """
     return id in self.affinity
 
   def del_affinity (self, id):
+    """
+    Remove affinity value with given id.
+
+    :param id: unique ID
+    :type id: str or int
+    :return: removed value
+    :rtype: str or int
+    """
     return self.affinity.pop(id, None)
 
   def add_antiaffinity (self, id, value):
+    """
+    Set antiaffinity value.
+
+    :param id: unique ID
+    :type id: str or int
+    :param value: new value
+    :type value: str or int
+    :return: new value
+    :rtype: str or int
+    """
     self.antiaffinity[id] = value
     return value
 
   def has_antiaffinity (self, id):
+    """
+    Return True if antiaffinity value with id is exist.
+
+    :param id: unique ID
+    :type id: str or int
+    :return: value exits or not
+    :rtype: bool
+    """
     return id in self.antiaffinity
 
   def del_antiaffinity (self, id):
+    """
+    Remove antiaffinity value with given id.
+
+    :param id: unique ID
+    :type id: str or int
+    :return: removed value
+    :rtype: str or int
+    """
     return self.antiaffinity.pop(id, None)
 
   def add_variable (self, key, id):
+    """
+    Set variable value.
+
+    :param key: unique key
+    :type key: str or int
+    :param id: new value
+    :type id: str or int
+    :return: new value
+    :rtype: str or int
+    """
     self.variable[key] = id
     return id
 
   def has_variable (self, key):
+    """
+    Return True if variable value with key is exist.
+
+    :param key: unique key
+    :type key: str or int
+    :return: value exits or not
+    :rtype: bool
+    """
     return key in self.variable
 
   def del_variable (self, key):
+    """
+    Remove variable value with given key.
+
+    :param key: unique key
+    :type key: str or int
+    :return: removed value
+    :rtype: str or int
+    """
     return self.variable.pop(key, None)
 
   def add_constraint (self, id, formula):
+    """
+    Set constraint value.
+
+    :param id: unique ID
+    :type id: str or int
+    :param formula: new value
+    :type formula: str or int
+    :return: new value
+    :rtype: str or int
+    """
     self.constraint[id] = formula
     return formula
 
   def has_constraint (self, id):
+    """
+    Return True if variable value with key is exist.
+
+    :param id: unique ID
+    :type id: str or int
+    :return: value exits or not
+    :rtype: bool
+    """
     return id in self.constraint
 
   def del_constraint (self, id):
+    """
+    Remove antiaffinity value with given id.
+
+    :param id: unique ID
+    :type id: str or int
+    :return: removed value
+    :rtype: str or int
+    """
     return self.constraint.pop(id, None)
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: list
+    """
     constraints = super(Constraints, self).persist()
     if self.affinity:
       constraints['affinity'] = self.affinity
@@ -1008,6 +1121,13 @@ class Constraints(Persistable):
     return constraints
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     super(Constraints, self).load(data=data)
     self.affinity = data.get('affinity', OrderedDict())
     self.antiaffinity = data.get('antiaffinity', OrderedDict())
@@ -1280,6 +1400,8 @@ class Link(Element):
     :type type: str
     :param id: optional id
     :type id: str or int
+    :param constraints: optional Constraints object
+    :type constraints: :class:`Constraints`
     :return: None
     """
     super(Link, self).__init__(id=id, type=type)
@@ -1362,6 +1484,12 @@ class DelayMatrix(Persistable):
     self.matrix = OrderedDict()
 
   def persist (self):
+    """
+    Persist object.
+
+    :return: JSON representation
+    :rtype: list
+    """
     res = super(DelayMatrix, self).persist()
     for k, v in self.matrix.iteritems():
       if not isinstance(v, dict):
@@ -1376,24 +1504,68 @@ class DelayMatrix(Persistable):
     return res
 
   def load (self, data, *args, **kwargs):
+    """
+    Instantiate object from JSON.
+
+    :param data: JSON data
+    :type data: dict
+    :return: None
+    """
     self.matrix.update(data)
     return self
 
   def is_empty (self):
+    """
+    Check if matrix object is empty or not.
+
+    :return: is empty
+    :rtype: bool
+    """
     return sum([len(e) for e in self.matrix]) == 0
 
   def add_delay (self, src, dst, delay):
+    """
+    Add delay value with given ports.
+
+    :param src: source port object
+    :type src: :class:`Port`
+    :param dst: destination port object
+    :type dst: :class:`Port`
+    :param delay: delay value between ports
+    :type delay: int or float
+    :return: None
+    """
     if src not in self.matrix:
       self.matrix[src] = OrderedDict()
     self.matrix[src][dst] = delay
 
   def get_delay (self, src, dst):
+    """
+    Return delay value defined between given ports.
+
+    :param src: source port object
+    :type src: :class:`Port`
+    :param dst: destination port object
+    :type dst: :class:`Port`
+    :return: delay value
+    :rtype: int or float
+    """
     # id-s are always string in delay matrix, because of JSON standard
     if src in self.matrix:
       if dst in self.matrix[src]:
         return self.matrix[src][dst]
 
   def del_delay (self, src, dst):
+    """
+    Remove delay value from matrix.
+
+    :param src: source port object
+    :type src: :class:`Port`
+    :param dst: destination port object
+    :type dst: :class:`Port`
+    :return: removed value
+    :rtype: int or float or None
+    """
     # id-s are always string in delay matrix, because of JSON standard
     if src in self.matrix:
       if dst in self.matrix[src]:
@@ -1730,6 +1902,10 @@ class InfraPort(Port):
     :type delay: float
     :param id: specific id of the flowrule
     :type id: str or int
+    :param external: marked as external
+    :type external: bool
+    :param constraints: additional constraint object
+    :type constraints: :class:`Constraints`
     :return: newly created and stored flowrule
     :rtype: :any:`Flowrule`
     """
@@ -2310,6 +2486,10 @@ class EdgeSGLink(Link):
     :type delay: float
     :param bandwidth: requested bandwidth on the SG next hop
     :type bandwidth: float
+    :param constraints: optional Constraints object
+    :type constraints: :class:`Constraints`
+    :param additional_actions: additional actions
+    :type additional_actions: str
     :return: None
     """
     super(EdgeSGLink, self).__init__(src=src, dst=dst, type=Link.SG, id=id,
