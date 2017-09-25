@@ -30,6 +30,7 @@ from networkx.exception import NetworkXError
 from nffg_elements import *
 
 VERSION = "1.0"
+VERBOSE = 5
 
 
 class AbstractNFFG(object):
@@ -1466,6 +1467,7 @@ class NFFGToolBox(object):
         # Normal SAP --> copy SAP
         c_sap = base.add_sap(sap_obj=deepcopy(nffg.network.node[sap_id]))
         log.debug("Copy SAP: %s" % c_sap)
+
     # Copy remaining links which should be valid
     for u, v, link in nffg.network.edges_iter(data=True):
       src_port = base.network.node[u].ports[link.src.id]
@@ -1949,12 +1951,12 @@ class NFFGToolBox(object):
     sbb_infra.add_supported_type(s_types)
     log.debug("Added supported types: %s" % s_types)
     log.debug("Added Infra BiSBiS: %s" % sbb_infra)
-    log.log(5, "SBB:\n%s" % sbb_infra.dump())
+    log.log(VERBOSE, "SBB:\n%s" % sbb_infra.dump())
     # Add existing NFs
     for nf in nffg.nfs:
       c_nf = sbb.add_nf(nf=nf.copy())
       log.debug("Added NF: %s" % c_nf)
-      log.log(5, "NF:\n%s" % nf.dump())
+      log.log(VERBOSE, "NF:\n%s" % nf.dump())
       # Discover and add NF connections
       for u, v, l in nffg.real_out_edges_iter(nf.id):
         if l.type != NFFG.TYPE_LINK_DYNAMIC:
@@ -1976,7 +1978,7 @@ class NFFGToolBox(object):
     for sap in nffg.saps:
       c_sap = sbb.add_sap(sap_obj=sap.copy())
       log.debug("Added SAP: %s" % c_sap)
-      log.log(5, "SAP:\n%s" % c_sap.dump())
+      log.log(VERBOSE, "SAP:\n%s" % c_sap.dump())
       # Discover and add SAP connections
       for u, v, l in nffg.real_out_edges_iter(sap.id):
         if len(sap.ports) > 1:
@@ -1996,9 +1998,9 @@ class NFFGToolBox(object):
     # Shortest paths in format of dict in dict keyed with node ids
     # e.g. SAP2 --> EE1 --> 4.9
     latency_paths = NFFGToolBox.shortestPathsInLatency(G=nffg.network)
-    log.log(5, "Calculated latency paths for delay matrix:\n%s"
+    log.log(VERBOSE, "Calculated latency paths for delay matrix:\n%s"
             % pprint.pformat(latency_paths))
-    log.log(5, "Collected SAP ports for delay matrix:\n%s"
+    log.log(VERBOSE, "Collected SAP ports for delay matrix:\n%s"
             % pprint.pformat(delay_matrix_cache))
     dm_elements = itertools.permutations(delay_matrix_cache.keys(), 2)
     for src, dst in dm_elements:
