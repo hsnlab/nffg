@@ -3072,7 +3072,7 @@ class NFFGToolBox(object):
       return False
 
   @classmethod
-  def explodeGraphWithPortnodes (cls, G, id_connector_character):
+  def explodeGraphWithPortnodes (cls, G, id_connector_character='&'):
     """
     Makes ports of the original graph into the nodes of a new NetworkX graph,
     adds delay values onto edge data. The returned graph can be used by standard
@@ -3095,6 +3095,8 @@ class NFFGToolBox(object):
           lambda p, c=id_connector_character: id_connector_character.join(
             (str(p.id), str(p.node.id))), static_ports_of_infra)
         exploded_G.add_nodes_from(static_ports_of_infra_global_ids)
+        # all of them should already have the weight set to non negative float
+        bandwidth_based_node_weight = obj.weight
         if type(obj.resources.delay) == type(dict):
           # delay is dict of dicts storing the directed distances between ports
           for port1, distances in obj.resources.delay.iteritems():
@@ -3102,7 +3104,7 @@ class NFFGToolBox(object):
               exploded_G.add_edge(
                 id_connector_character.join((str(port1), obj.id)),
                 id_connector_character.join((str(port2), obj.id)),
-                attr_dict={'delay': dist})
+                attr_dict={'delay': dist, 'weight': bandwidth_based_node_weight})
         else:
           # support filling the delay matrix even if the node has only a single
           # delay value, for partial backward compatibility and convenience
@@ -3112,7 +3114,8 @@ class NFFGToolBox(object):
             for j in static_ports_of_infra_global_ids:
               if i != j:
                 exploded_G.add_edge(i, j,
-                                    attr_dict={'delay': universal_node_delay})
+                                    attr_dict={'delay': universal_node_delay,
+                                    'weight': bandwidth_based_node_weight})
       elif obj.type == NFFG.TYPE_SAP:
         sap_port_found = False
         for p in obj.ports:
@@ -3135,7 +3138,7 @@ class NFFGToolBox(object):
         exploded_G.add_edge(
           id_connector_character.join((str(link.src.id), str(i))),
           id_connector_character.join((str(link.dst.id), str(j))),
-          attr_dict={'delay': link_delay})
+          attr_dict={'delay': link_delay, 'weight': link.weight})
     return exploded_G
 
   @classmethod
@@ -3228,18 +3231,22 @@ class NFFGToolBox(object):
     return dict(min_length_paths)
 
   @classmethod
-  def shortestPathsInLatency (cls, G, return_paths=False,
+  def shortestPathsInLatency (cls, G, return_paths=False, exploded_G=None,
                               id_connector_character='&'):
     """
     Calculates shortest pased considering latencies between Infra node ports.
     Uses only the infrastructure part of an NFFG, non Infra nodes doesn't have
     internal forwarding latencies.
+    :param id_connector_character: separator to append port and node names
+    :param exploded_G: NetworkX graph where nodes are ports, if given this is
+                       used instead of G
     :param G:
     :param return_paths:
     :return:
     """
-    exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G,
-                                                       id_connector_character)
+    if exploded_G is None:
+      exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G,
+                                                         id_connector_character)
 
     exploded_dists = networkx.all_pairs_dijkstra_path_length(exploded_G,
                                                              weight='delay')
