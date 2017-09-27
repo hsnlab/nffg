@@ -3096,7 +3096,8 @@ class NFFGToolBox(object):
             (str(p.id), str(p.node.id))), static_ports_of_infra)
         exploded_G.add_nodes_from(static_ports_of_infra_global_ids)
         # all of them should already have the weight set to non negative float
-        bandwidth_based_node_weight = obj.weight
+        bandwidth_based_node_weight = obj.weight if hasattr(obj, 'weight') \
+                                                 else 0.0
         if type(obj.resources.delay) == type(dict):
           # delay is dict of dicts storing the directed distances between ports
           for port1, distances in obj.resources.delay.iteritems():
@@ -3136,10 +3137,11 @@ class NFFGToolBox(object):
       if link.type == NFFG.TYPE_LINK_STATIC:
         # if a link delay is None, we should take it as 0ms delay.
         link_delay = link.delay if link.delay is not None else 0.0
+        link_weight = link.weight if hasattr(link, 'weight') else 0.0
         exploded_G.add_edge(
           id_connector_character.join((str(link.src.id), str(i))),
           id_connector_character.join((str(link.dst.id), str(j))),
-          attr_dict={'delay': link_delay, 'weight': link.weight,
+          attr_dict={'delay': link_delay, 'weight': link_weight,
                      'static_link_id': link.id})
     return exploded_G
 
@@ -3185,7 +3187,7 @@ class NFFGToolBox(object):
     :return:
     """
     for i in exploded_G.nodes():
-      if id_connector_character in i:
+      if type(i) == str and id_connector_character in i:
         i = NFFGToolBox.try_to_convert(i.split(id_connector_character)[1])
       if i in G and i in exploded_G:
         # removes all connected edges as well
@@ -3300,15 +3302,10 @@ class NFFGToolBox(object):
     for exploded_path in exploded_paths_list:
       extracted_path = []
       extracted_path_linkids = []
-      if id_connector_character in exploded_path[0]:
-        raise RuntimeError("First element on a path of the exploded graph "
-                           "should be an original node ID, but the path is %s" %
-                           exploded_path)
-      else:
-        # the path must start from an original node!
-        last_node = exploded_path[0]
-        # integer node IDs must be converted if possible.
-        extracted_path.append(NFFGToolBox.try_to_convert(last_node))
+      # the path must start from an original node!
+      last_node = exploded_path[0]
+      # integer node IDs must be converted if possible.
+      extracted_path.append(NFFGToolBox.try_to_convert(last_node))
       for node in exploded_path[1:]:
         if id_connector_character not in node and node != exploded_path[-1]:
           raise RuntimeError("Inner elements of the exploded path must contain "
