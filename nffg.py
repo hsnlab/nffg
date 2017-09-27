@@ -3178,7 +3178,7 @@ class NFFGToolBox(object):
       return False
 
   @classmethod
-  def explodeGraphWithPortnodes (cls, G, id_connector_character):
+  def explodeGraphWithPortnodes (cls, G, id_connector_character='&'):
     """
     Makes ports of the original graph into the nodes of a new NetworkX graph,
     adds delay values onto edge data. The returned graph can be used by standard
@@ -3205,6 +3205,9 @@ class NFFGToolBox(object):
           lambda pp, c=id_connector_character: id_connector_character.join(
             (str(pp.id), str(pp.node.id))), static_ports_of_infra)
         exploded_G.add_nodes_from(static_ports_of_infra_global_ids)
+        # all of them should already have the weight set to non negative float
+        bandwidth_based_node_weight = obj.weight if hasattr(obj, 'weight') \
+                                                 else 0.0
         if type(obj.resources.delay) == type(dict):
           # delay is dict of dicts storing the directed distances between ports
           for port1, distances in obj.resources.delay.iteritems():
@@ -3212,7 +3215,7 @@ class NFFGToolBox(object):
               exploded_G.add_edge(
                 id_connector_character.join((str(port1), obj.id)),
                 id_connector_character.join((str(port2), obj.id)),
-                attr_dict={'delay': dist})
+                attr_dict={'delay': dist, 'weight': bandwidth_based_node_weight})
         else:
           # support filling the delay matrix even if the node has only a single
           # delay value, for partial backward compatibility and convenience
@@ -3222,7 +3225,9 @@ class NFFGToolBox(object):
             for j in static_ports_of_infra_global_ids:
               if i != j:
                 exploded_G.add_edge(i, j,
-                                    attr_dict={'delay': universal_node_delay})
+                                    attr_dict={'delay': universal_node_delay,
+                                    'weight': bandwidth_based_node_weight})
+
       elif obj.type == NFFG.TYPE_SAP:
         sap_port_found = False
         for p in obj.ports:
@@ -3242,14 +3247,66 @@ class NFFGToolBox(object):
       if link.type == NFFG.TYPE_LINK_STATIC:
         # if a link delay is None, we should take it as 0ms delay.
         link_delay = link.delay if link.delay is not None else 0.0
+        link_weight = link.weight if hasattr(link, 'weight') else 0.0
         exploded_G.add_edge(
           id_connector_character.join((str(link.src.id), str(i))),
           id_connector_character.join((str(link.dst.id), str(j))),
-          attr_dict={'delay': link_delay})
+          attr_dict={'delay': link_delay, 'weight': link_weight,
+                     'static_link_id': link.id})
     return exploded_G
 
   @classmethod
-  def extractDistsFromExploded (cls, G, exploded_dists, id_connector_character):
+  def addOriginalNodesToExplodedGraph(cls, sources, destinations, exploded_G,
+                                      id_connector_character='&'):
+    """
+    Modifies the exploded_G to add original nodes from G, and connects
+    them with zero weighted and delayed links to all corresponding exploded p
+    ort nodes. Elements of 'sources' are towards the graph and elements of
+    'destinations' are towards the original nodes. This is needed so we could
+    calculate paths from an Infra node, without needing to decide which
+    outbound port we want to use.
+    :param G:
+    :param exploded_G:
+    :param id_connector_character:
+    :return:
+    """
+    # exploded_G.add_nodes_from(sources)
+    # exploded_G.add_nodes_from(destinations)
+    for i in exploded_G.nodes():
+      # if id_connector_character in i:
+      original_node_id = NFFGToolBox.try_to_convert(
+                                     i.split(id_connector_character)[1])
+      # the add_edge function adds the node if that is not there yet
+      if original_node_id in sources:
+        exploded_G.add_edge(original_node_id, i,
+                            attr_dict={'delay': 0, 'weight': 0})
+      elif original_node_id in destinations:
+        exploded_G.add_edge(i, original_node_id,
+                            attr_dict={'delay': 0, 'weight': 0})
+    return exploded_G
+
+  @classmethod
+  def purgeExplodedGraphFromOriginalNodes(cls, G, exploded_G,
+                                          id_connector_character='&'):
+    """
+    Deletes all original nodes from the exploded graph and all of its connected
+     edges to gain back the pure exploded graph without original nodes.
+    :param G:
+    :param exploded_G:
+    :param id_connector_character:
+    :return:
+    """
+    for i in exploded_G.nodes():
+      if type(i) == str and id_connector_character in i:
+        i = NFFGToolBox.try_to_convert(i.split(id_connector_character)[1])
+      if i in G and i in exploded_G:
+        # removes all connected edges as well
+        exploded_G.remove_node(i)
+    return exploded_G
+
+  @classmethod
+  def extractDistsFromExploded (cls, G, exploded_dists,
+                                id_connector_character='&'):
     """
     Extracts the shortest path length matrix from the calculation result on the
     exploded graph structure.
@@ -3298,7 +3355,7 @@ class NFFGToolBox(object):
 
   @classmethod
   def extractPathsFromExploded (cls, exploded_paths_dict, min_dist_pairs,
-                                id_connector_character):
+                                id_connector_character='&'):
     """
     Extracts and transforms paths from the matrix of shortest paths 
     calculated on the exploded graph structure.
@@ -3350,7 +3407,55 @@ class NFFGToolBox(object):
     return dict(min_length_paths)
 
   @classmethod
-  def shortestPathsInLatency (cls, G, return_paths=False,
+  def extractPathsLinkIDsFromExplodedPath (cls, exploded_G, exploded_paths_list,
+                                           id_connector_character='&'):
+    """
+    Extracts the static link ID-s of the given paths based on the exploded
+    graph. Assumes that the exploded_G generation added a 'static_link_id'
+    attribute to the exploded versions of static links and the paths were
+    calculated on the exploded graph where the original nodes are added.
+    :param exploded_G:
+    :param exploded_paths_list:
+    :param id_connector_character:
+    :return: list of link and node ids, preserving the order in exploded_paths
+    """
+    extracted_paths_list = []
+    extracted_path_linkids_list = []
+    for exploded_path in exploded_paths_list:
+      extracted_path = []
+      extracted_path_linkids = []
+      # the path must start from an original node!
+      last_node = exploded_path[0]
+      # integer node IDs must be converted if possible.
+      extracted_path.append(NFFGToolBox.try_to_convert(last_node))
+      for node in exploded_path[1:]:
+        if id_connector_character not in node and node != exploded_path[-1]:
+          raise RuntimeError("Inner elements of the exploded path must contain "
+                             "the ID connector character (%s), but the path "
+                             "is %s"%(id_connector_character, exploded_path))
+        elif node != exploded_path[-1]:
+          # integer node IDs must be converted if possible.
+          original_node_id = NFFGToolBox.try_to_convert(
+                                         node.split(id_connector_character)[1])
+          if original_node_id != extracted_path[-1]:
+            # this graph must have such a link, otherwise there wouldn't be a path
+            if 'static_link_id' in exploded_G[last_node][node]:
+              extracted_path.append(original_node_id)
+              extracted_path_linkids.append(NFFGToolBox.try_to_convert(
+                                  exploded_G[last_node][node]['static_link_id']))
+        else:
+          # The last node is added by the exploded path's one-before-last
+          # element, so this branch would be skipped anyway to avoid duplicating
+          #  the last node element
+          pass
+        # last node must be valid in the exploded_G
+        last_node = node
+      extracted_paths_list.append(extracted_path)
+      extracted_path_linkids_list.append(extracted_path_linkids)
+    return extracted_paths_list, extracted_path_linkids_list
+
+  @classmethod
+  def shortestPathsInLatency (cls, G, return_paths=False, exploded_G=None,
                               id_connector_character='&'):
     """
     Calculates shortest pased considering latencies between Infra node ports.
@@ -3367,8 +3472,9 @@ class NFFGToolBox(object):
     :return: shortest path and optionally the extracted path
     :rtype: dict or tuple
     """
-    exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G,
-                                                       id_connector_character)
+    if exploded_G is None:
+      exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G,
+                                                         id_connector_character)
 
     exploded_dists = networkx.all_pairs_dijkstra_path_length(exploded_G,
                                                              weight='delay')
