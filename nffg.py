@@ -3144,29 +3144,52 @@ class NFFGToolBox(object):
     return exploded_G
 
   @classmethod
-  def addOriginalNodesToExplodedGraph(cls, G, exploded_G,
+  def addOriginalNodesToExplodedGraph(cls, sources, destinations, exploded_G,
                                       id_connector_character='&'):
     """
-    Modifies the exploded_G to add all original Infra nodes from G, and connects
+    Modifies the exploded_G to add original nodes from G, and connects
     them with zero weighted and delayed links to all corresponding exploded p
-    ort nodes. This is needed so we could calculate paths from an Infra node,
-    without needing to decide which outbound port we want to use.
+    ort nodes. Elements of 'sources' are towards the graph and elements of
+    'destinations' are towards the original nodes. This is needed so we could
+    calculate paths from an Infra node, without needing to decide which
+    outbound port we want to use.
     :param G:
     :param exploded_G:
     :param id_connector_character:
     :return:
     """
-    exploded_G.add_nodes_from(G.nodes_iter())
-    for i in exploded_G:
-      if i not in G:
-        original_node_id = NFFGToolBox.try_to_convert(
-                           i.split(id_connector_character)[1])
-        if G.node[original_node_id].type == 'INFRA':
-          # add bidirectional 0 weighted nodes
-          exploded_G.add_edge(original_node_id, i,
-                              attr_dict={'delay': 0, 'weight': 0})
-          exploded_G.add_edge(i, original_node_id,
-                              attr_dict={'delay': 0, 'weight': 0})
+    # exploded_G.add_nodes_from(sources)
+    # exploded_G.add_nodes_from(destinations)
+    for i in exploded_G.nodes():
+      # if id_connector_character in i:
+      original_node_id = NFFGToolBox.try_to_convert(
+                                     i.split(id_connector_character)[1])
+      # the add_edge function adds the node if that is not there yet
+      if original_node_id in sources:
+        exploded_G.add_edge(original_node_id, i,
+                            attr_dict={'delay': 0, 'weight': 0})
+      elif original_node_id in destinations:
+        exploded_G.add_edge(i, original_node_id,
+                            attr_dict={'delay': 0, 'weight': 0})
+    return exploded_G
+
+  @classmethod
+  def purgeExplodedGraphFromOriginalNodes(cls, G, exploded_G,
+                                          id_connector_character='&'):
+    """
+    Deletes all original nodes from the exploded graph and all of its connected
+     edges to gain back the pure exploded graph without original nodes.
+    :param G:
+    :param exploded_G:
+    :param id_connector_character:
+    :return:
+    """
+    for i in exploded_G.nodes():
+      if id_connector_character in i:
+        i = NFFGToolBox.try_to_convert(i.split(id_connector_character)[1])
+      if i in G and i in exploded_G:
+        # removes all connected edges as well
+        exploded_G.remove_node(i)
     return exploded_G
 
   @classmethod
@@ -3287,20 +3310,27 @@ class NFFGToolBox(object):
         # integer node IDs must be converted if possible.
         extracted_path.append(NFFGToolBox.try_to_convert(last_node))
       for node in exploded_path[1:]:
-        # integer node IDs must be converted if possible.
-        original_node_id = NFFGToolBox.try_to_convert(
-                           node.split(id_connector_character)[1])
         if id_connector_character not in node and node != exploded_path[-1]:
           raise RuntimeError("Inner elements of the exploded path must contain "
                              "the ID connector character (%s), but the path "
                              "is %s"%(id_connector_character, exploded_path))
-        elif original_node_id != extracted_path[-1]:
-          # this graph must have such a link, otherwise there wouldn't be a path
-          if 'static_link_id' in exploded_G[last_node][node]:
-            extracted_path.append(original_node_id)
-            extracted_path_linkids.append(NFFGToolBox.try_to_convert(
-                                exploded_G[last_node][node]['static_link_id']))
-            last_node = node
+        elif node != exploded_path[-1]:
+          # integer node IDs must be converted if possible.
+          original_node_id = NFFGToolBox.try_to_convert(
+                                         node.split(id_connector_character)[1])
+          if original_node_id != extracted_path[-1]:
+            # this graph must have such a link, otherwise there wouldn't be a path
+            if 'static_link_id' in exploded_G[last_node][node]:
+              extracted_path.append(original_node_id)
+              extracted_path_linkids.append(NFFGToolBox.try_to_convert(
+                                  exploded_G[last_node][node]['static_link_id']))
+        else:
+          # The last node is added by the exploded path's one-before-last
+          # element, so this branch would be skipped anyway to avoid duplicating
+          #  the last node element
+          pass
+        # last node must be valid in the exploded_G
+        last_node = node
       extracted_paths_list.append(extracted_path)
       extracted_path_linkids_list.append(extracted_path_linkids)
     return extracted_paths_list, extracted_path_linkids_list
