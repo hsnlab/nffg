@@ -3260,19 +3260,50 @@ class NFFGToolBox(object):
     return dict(min_length_paths)
 
   @classmethod
-  def extractPathsLinkIDsFromExplodedPath (cls, exploded_G, exploded_paths,
+  def extractPathsLinkIDsFromExplodedPath (cls, exploded_G, exploded_paths_list,
                                            id_connector_character='&'):
     """
     Extracts the static link ID-s of the given paths based on the exploded
     graph. Assumes that the exploded_G generation added a 'static_link_id'
-    attribute to the exploded versions of static links.
+    attribute to the exploded versions of static links and the paths were
+    calculated on the exploded graph where the original nodes are added.
     :param exploded_G:
-    :param exploded_paths:
+    :param exploded_paths_list:
     :param id_connector_character:
-    :return: list of link ids, preserving the order in exploded_paths
+    :return: list of link and node ids, preserving the order in exploded_paths
     """
-    # TODO:
-    return
+    extracted_paths_list = []
+    extracted_path_linkids_list = []
+    for exploded_path in exploded_paths_list:
+      extracted_path = []
+      extracted_path_linkids = []
+      if id_connector_character in exploded_path[0]:
+        raise RuntimeError("First element on a path of the exploded graph "
+                           "should be an original node ID, but the path is %s" %
+                           exploded_path)
+      else:
+        # the path must start from an original node!
+        last_node = exploded_path[0]
+        # integer node IDs must be converted if possible.
+        extracted_path.append(NFFGToolBox.try_to_convert(last_node))
+      for node in exploded_path[1:]:
+        # integer node IDs must be converted if possible.
+        original_node_id = NFFGToolBox.try_to_convert(
+                           node.split(id_connector_character)[1])
+        if id_connector_character not in node and node != exploded_path[-1]:
+          raise RuntimeError("Inner elements of the exploded path must contain "
+                             "the ID connector character (%s), but the path "
+                             "is %s"%(id_connector_character, exploded_path))
+        elif original_node_id != extracted_path[-1]:
+          # this graph must have such a link, otherwise there wouldn't be a path
+          if 'static_link_id' in exploded_G[last_node][node]:
+            extracted_path.append(original_node_id)
+            extracted_path_linkids.append(NFFGToolBox.try_to_convert(
+                                exploded_G[last_node][node]['static_link_id']))
+            last_node = node
+      extracted_paths_list.append(extracted_path)
+      extracted_path_linkids_list.append(extracted_path_linkids)
+    return extracted_paths_list, extracted_path_linkids_list
 
   @classmethod
   def shortestPathsInLatency (cls, G, return_paths=False, exploded_G=None,
