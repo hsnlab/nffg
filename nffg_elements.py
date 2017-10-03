@@ -28,6 +28,7 @@ class Persistable(object):
   """
   Define general persist function for the whole NFFG structure.
   """
+  __slots__ = ()
 
   def persist (self):
     """
@@ -91,6 +92,8 @@ class Element(Persistable):
   STATUS_RUN = "RUNNING"
   STATUS_STOP = "STOPPED"
   STATUS_FAIL = "FAILED"
+
+  __slots__ = ('id', 'type', 'operation', 'status')
 
   def __init__ (self, id=None, type="ELEMENT", operation=None, status=None):
     """
@@ -278,6 +281,8 @@ class L3Address(Element):
   Wrapper class for storing L3 address values.
   """
 
+  __slots__ = ('name', 'configure', 'client', 'requested', 'provided')
+
   def __init__ (self, id, name=None, configure=None, client=None,
                 requested=None, provided=None):
     """
@@ -344,6 +349,8 @@ class L3AddressContainer(Persistable):
   """
   Container class for storing L3 address data.
   """
+
+  __slots__ = ('container',)
 
   def __init__ (self, container=None):
     """
@@ -510,6 +517,10 @@ class Port(Element):
   """Port type"""
   ROLE_CONSUMER = "consumer"
   ROLE_PROVIDER = "provider"
+
+  __slots__ = ('__node', 'properties', 'metadata', 'name', 'sap', 'capability',
+               'technology', 'role', 'delay', 'bandwidth', 'cost', 'controller',
+               'orchestrator', 'l2', 'l3', 'l4')
 
   def __init__ (self, node, id=None, name=None, properties=None, sap=None,
                 capability=None, technology=None, role=None, delay=None,
@@ -804,6 +815,8 @@ class PortContainer(Persistable):
     >>> cont["port_id"]
   """
 
+  __slots__ = ('container',)
+
   def __init__ (self, container=None):
     """
     Init.
@@ -947,6 +960,8 @@ class Constraints(Persistable):
   """
   Container class for constraints.
   """
+
+  __slots__ = ('affinity', 'antiaffinity', 'variable', 'constraint')
 
   def __init__ (self):
     """
@@ -1150,6 +1165,8 @@ class Node(Element):
   SAP = "SAP"
   # Network Function (NF) node --> abstract node represents a virtual function
   NF = "NF"
+
+  __slots__ = ('name', 'ports', 'metadata', 'constraints')
 
   def __init__ (self, type, id=None, name=None, metadata=None):
     """
@@ -1388,6 +1405,8 @@ class Link(Element):
   # Requirement --> virtual link to define constraints between SG elements
   REQUIREMENT = "REQUIREMENT"
 
+  __slots__ = ('src', 'dst', 'constraints')
+
   def __init__ (self, src=None, dst=None, type=None, id=None, constraints=None):
     """
     Init.
@@ -1412,10 +1431,7 @@ class Link(Element):
     self.src = src  # mandatory
     # Reference to dst Port object
     self.dst = dst  # mandatory
-    if constraints is None:
-      self.constraints = Constraints()
-    else:
-      self.constraints = constraints
+    self.constraints = constraints if constraints is not None else Constraints()
 
   def persist (self):
     """
@@ -1478,6 +1494,8 @@ class DelayMatrix(Persistable):
   """
   Delay Matrix keyed by Port IDs.
   """
+
+  __slots__ = ('matrix',)
 
   def __init__ (self):
     super(DelayMatrix, self).__init__()
@@ -1588,7 +1606,7 @@ class NodeResource(Persistable):
   Class for storing resource information for Nodes.
   """
 
-  # YANG: grouping node_resource
+  __slots__ = ('cpu', 'mem', 'storage', 'delay', 'bandwidth')
 
   def __init__ (self, cpu=None, mem=None, storage=None, delay=None,
                 bandwidth=None):
@@ -1761,6 +1779,9 @@ class Flowrule(Element):
   Class for storing a flowrule.
   """
 
+  __slots__ = ('match', 'action', 'bandwidth', 'delay', 'external',
+               'constraints')
+
   def __init__ (self, id=None, match="", action="", bandwidth=None, delay=None,
                 external=False, constraints=None):
     """
@@ -1784,10 +1805,7 @@ class Flowrule(Element):
     self.bandwidth = bandwidth
     self.delay = delay
     self.external = external
-    if constraints is None:
-      self.constraints = Constraints()
-    else:
-      self.constraints = constraints.copy()
+    self.constraints = constraints if constraints is not None else Constraints()
 
   def persist (self):
     """
@@ -1859,6 +1877,8 @@ class InfraPort(Port):
   """
   Class for storing a port of Infra Node and handles flowrules.
   """
+
+  __slots__ = ('flowrules',)
 
   def __init__ (self, node, id=None, name=None, properties=None, sap=None,
                 capability=None, technology=None, delay=None, bandwidth=None,
@@ -1993,6 +2013,9 @@ class NodeNF(Node):
   Network Function (NF) nodes in the graph.
   """
 
+  __slots__ = ('functional_type', 'deployment_type', 'resources',
+               'placement_criteria')
+
   def __init__ (self, id=None, name=None, func_type=None, dep_type=None,
                 res=None):
     """
@@ -2012,6 +2035,8 @@ class NodeNF(Node):
     self.deployment_type = dep_type
     self.resources = res if res is not None else NodeResource()
     # container
+    # Internal attributes for mapping
+    self.placement_criteria = ()
 
   def persist (self):
     """
@@ -2065,6 +2090,8 @@ class NodeSAP(Node):
   Class for SAP nodes in the NF-FG.
   """
 
+  __slots__ = ('binding', 'placement_criteria')
+
   def __init__ (self, id=None, name=None, binding=None, metadata=None):
     """
     Init.
@@ -2083,6 +2110,8 @@ class NodeSAP(Node):
                                   metadata=metadata)
     # Signals if the SAP is an inter-domain SAP
     self.binding = binding
+    # Internal attributes for mapping
+    self.placement_criteria = ()
 
   def __str__ (self):
     """
@@ -2140,6 +2169,9 @@ class NodeInfra(Node):
   # Defined domain type
   DEFAULT_DOMAIN = "VIRTUAL"
 
+  __slots__ = ('mapping_features', 'domain', 'infra_type', 'supported',
+               'resources', 'delay_matrix', 'availres', 'weight')
+
   def __init__ (self, id=None, name=None, domain=None, infra_type=None,
                 supported=None, res=None, mapping_features=None):
     """
@@ -2172,6 +2204,9 @@ class NodeInfra(Node):
       # Set resource container
     self.resources = res if res is not None else NodeResource()
     self.delay_matrix = DelayMatrix()
+    # Internal attributes for mapping
+    self.availres = None
+    self.weight = None
 
   def add_port (self, id=None, name=None, properties=None, sap=None,
                 capability=None, technology=None, delay=None, bandwidth=None,
@@ -2366,6 +2401,8 @@ class EdgeLink(Link):
   Represent a static or dynamic link.
   """
 
+  __slots__ = ('backward', 'delay', 'bandwidth', 'availbandwidth', 'weight')
+
   def __init__ (self, src=None, dst=None, type=None, id=None, backward=False,
                 delay=None, bandwidth=None):
     """
@@ -2394,6 +2431,9 @@ class EdgeLink(Link):
     self.backward = backward  # always False by default
     self.delay = delay  # optional
     self.bandwidth = bandwidth  # optional
+    # Internal attributes for mapping
+    self.availbandwidth = None
+    self.weight = None
 
   def persist (self):
     """
@@ -2463,6 +2503,9 @@ class EdgeSGLink(Link):
 
   Represent an edge between SG elements.
   """
+
+  __slots__ = ('flowclass', 'tag_info', 'delay', 'bandwidth',
+               'additional_actions')
 
   def __init__ (self, src=None, dst=None, id=None, flowclass=None,
                 tag_info=None, delay=None, bandwidth=None, constraints=None,
@@ -2564,6 +2607,8 @@ class EdgeReq(Link):
 
   Class for requirements between arbitrary NF modes.
   """
+
+  __slots__ = ('delay', 'bandwidth', 'sg_path')
 
   def __init__ (self, src=None, dst=None, id=None, delay=None, bandwidth=None,
                 sg_path=None):
@@ -2683,6 +2728,10 @@ class NFFGModel(Element):
   """Description"""
   # Container type
   TYPE = "NFFG"
+
+  __slots__ = ('name', 'service_id', 'version', 'metadata', 'mode', 'node_nfs',
+               'node_saps', 'node_infras', 'edge_links', 'edge_sg_nexthops',
+               'edge_reqs')
 
   def __init__ (self, id=None, name=None, service_id=None, metadata=None,
                 mode=None, status=None, version=None):

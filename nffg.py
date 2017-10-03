@@ -41,6 +41,50 @@ class AbstractNFFG(object):
   interfaces with the high level data manipulation functions.
   """
 
+  __slots__ = ()
+
+  # Default domain value
+  DEFAULT_DOMAIN = NodeInfra.DEFAULT_DOMAIN
+  """Default domain value"""
+  # Infra types
+  TYPE_INFRA_SDN_SW = NodeInfra.TYPE_SDN_SWITCH
+  TYPE_INFRA_EE = NodeInfra.TYPE_EE
+  TYPE_INFRA_STATIC_EE = NodeInfra.TYPE_STATIC_EE
+  TYPE_INFRA_BISBIS = NodeInfra.TYPE_BISBIS
+  # Node types
+  TYPE_INFRA = Node.INFRA
+  TYPE_NF = Node.NF
+  TYPE_SAP = Node.SAP
+  # Link types
+  TYPE_LINK_STATIC = Link.STATIC
+  TYPE_LINK_DYNAMIC = Link.DYNAMIC
+  TYPE_LINK_SG = Link.SG
+  TYPE_LINK_REQUIREMENT = Link.REQUIREMENT
+  # Port constants
+  PORT_ROLE_CONSUMER = Port.ROLE_CONSUMER
+  PORT_ROLE_PROVIDER = Port.ROLE_PROVIDER
+  # Mapping mode operations
+  MODE_ADD = "ADD"
+  MODE_DEL = "DELETE"
+  MODE_REMAP = "REMAP"
+  # Element operation
+  OP_CREATE = Element.OP_CREATE
+  OP_REPLACE = Element.OP_REPLACE
+  OP_MERGE = Element.OP_MERGE
+  OP_REMOVE = Element.OP_REMOVE
+  OP_DELETE = Element.OP_DELETE
+  # Element status
+  STATUS_INIT = Element.STATUS_INIT
+  STATUS_PENDING = Element.STATUS_PENDING
+  STATUS_DEPLOY = Element.STATUS_DEPLOY
+  STATUS_RUN = Element.STATUS_RUN
+  STATUS_STOP = Element.STATUS_STOP
+  STATUS_FAIL = Element.STATUS_FAIL
+  # Mapping process status
+  MAP_STATUS_SKIPPED = "SKIPPED"  # mark NFFG as skipped for ESCAPE
+
+  version = VERSION
+
   ##############################################################################
   # NFFG specific functions
   ##############################################################################
@@ -157,47 +201,9 @@ class NFFG(AbstractNFFG):
   """
   Internal NFFG representation based on networkx.
   """
-  # Default domain value
-  DEFAULT_DOMAIN = NodeInfra.DEFAULT_DOMAIN
-  """Default domain value"""
-  # Infra types
-  TYPE_INFRA_SDN_SW = NodeInfra.TYPE_SDN_SWITCH
-  TYPE_INFRA_EE = NodeInfra.TYPE_EE
-  TYPE_INFRA_STATIC_EE = NodeInfra.TYPE_STATIC_EE
-  TYPE_INFRA_BISBIS = NodeInfra.TYPE_BISBIS
-  # Node types
-  TYPE_INFRA = Node.INFRA
-  TYPE_NF = Node.NF
-  TYPE_SAP = Node.SAP
-  # Link types
-  TYPE_LINK_STATIC = Link.STATIC
-  TYPE_LINK_DYNAMIC = Link.DYNAMIC
-  TYPE_LINK_SG = Link.SG
-  TYPE_LINK_REQUIREMENT = Link.REQUIREMENT
-  # Port constants
-  PORT_ROLE_CONSUMER = Port.ROLE_CONSUMER
-  PORT_ROLE_PROVIDER = Port.ROLE_PROVIDER
-  # Mapping mode operations
-  MODE_ADD = "ADD"
-  MODE_DEL = "DELETE"
-  MODE_REMAP = "REMAP"
-  # Element operation
-  OP_CREATE = Element.OP_CREATE
-  OP_REPLACE = Element.OP_REPLACE
-  OP_MERGE = Element.OP_MERGE
-  OP_REMOVE = Element.OP_REMOVE
-  OP_DELETE = Element.OP_DELETE
-  # Element status
-  STATUS_INIT = Element.STATUS_INIT
-  STATUS_PENDING = Element.STATUS_PENDING
-  STATUS_DEPLOY = Element.STATUS_DEPLOY
-  STATUS_RUN = Element.STATUS_RUN
-  STATUS_STOP = Element.STATUS_STOP
-  STATUS_FAIL = Element.STATUS_FAIL
-  # Mapping process status
-  MAP_STATUS_SKIPPED = "SKIPPED"  # mark NFFG as skipped for ESCAPE
 
-  version = VERSION
+  __slots__ = ('network', 'id', 'name', 'service_id', 'metadata', 'mode',
+               'status', 'version')
 
   def __init__ (self, id=None, name=None, service_id=None, mode=None,
                 metadata=None, status=None, version=VERSION):
@@ -1059,7 +1065,8 @@ class NFFG(AbstractNFFG):
     copy.network = self.network.copy()
     return copy
 
-  def calculate_available_link_res (self, sg_hops_to_be_ignored, mode=MODE_ADD):
+  def calculate_available_link_res (self, sg_hops_to_be_ignored,
+                                    mode=AbstractNFFG.MODE_ADD):
     """
     Calculates available bandwidth on all the infrastructure links.
     Stores them in 'availbandwidth' field of the link objects.
@@ -1102,7 +1109,7 @@ class NFFG(AbstractNFFG):
                 "available resource calculation!" % link.id)
 
   def calculate_available_node_res (self, vnfs_to_be_left_in_place=None,
-                                    mode=MODE_ADD):
+                                    mode=AbstractNFFG.MODE_ADD):
     """
     Calculates available computation and networking resources of the nodes of
     NFFG. Creates a NodeResource instance for each NodeInfra to store the 
@@ -3207,7 +3214,7 @@ class NFFGToolBox(object):
         exploded_G.add_nodes_from(static_ports_of_infra_global_ids)
         # all of them should already have the weight set to non negative float
         bandwidth_based_node_weight = obj.weight if hasattr(obj, 'weight') \
-                                                 else 0.0
+          else 0.0
         if type(obj.resources.delay) == type(dict):
           # delay is dict of dicts storing the directed distances between ports
           for port1, distances in obj.resources.delay.iteritems():
@@ -3215,7 +3222,8 @@ class NFFGToolBox(object):
               exploded_G.add_edge(
                 id_connector_character.join((str(port1), obj.id)),
                 id_connector_character.join((str(port2), obj.id)),
-                attr_dict={'delay': dist, 'weight': bandwidth_based_node_weight})
+                attr_dict={'delay': dist,
+                           'weight': bandwidth_based_node_weight})
         else:
           # support filling the delay matrix even if the node has only a single
           # delay value, for partial backward compatibility and convenience
@@ -3226,7 +3234,8 @@ class NFFGToolBox(object):
               if i != j:
                 exploded_G.add_edge(i, j,
                                     attr_dict={'delay': universal_node_delay,
-                                    'weight': bandwidth_based_node_weight})
+                                               'weight':
+                                                 bandwidth_based_node_weight})
 
       elif obj.type == NFFG.TYPE_SAP:
         sap_port_found = False
@@ -3256,8 +3265,8 @@ class NFFGToolBox(object):
     return exploded_G
 
   @classmethod
-  def addOriginalNodesToExplodedGraph(cls, sources, destinations, exploded_G,
-                                      id_connector_character='&'):
+  def addOriginalNodesToExplodedGraph (cls, sources, destinations, exploded_G,
+                                       id_connector_character='&'):
     """
     Modifies the exploded_G to add original nodes from G, and connects
     them with zero weighted and delayed links to all corresponding exploded p
@@ -3275,7 +3284,7 @@ class NFFGToolBox(object):
     for i in exploded_G.nodes():
       # if id_connector_character in i:
       original_node_id = NFFGToolBox.try_to_convert(
-                                     i.split(id_connector_character)[1])
+        i.split(id_connector_character)[1])
       # the add_edge function adds the node if that is not there yet
       if original_node_id in sources:
         exploded_G.add_edge(original_node_id, i,
@@ -3286,8 +3295,8 @@ class NFFGToolBox(object):
     return exploded_G
 
   @classmethod
-  def purgeExplodedGraphFromOriginalNodes(cls, G, exploded_G,
-                                          id_connector_character='&'):
+  def purgeExplodedGraphFromOriginalNodes (cls, G, exploded_G,
+                                           id_connector_character='&'):
     """
     Deletes all original nodes from the exploded graph and all of its connected
      edges to gain back the pure exploded graph without original nodes.
@@ -3432,17 +3441,18 @@ class NFFGToolBox(object):
         if id_connector_character not in node and node != exploded_path[-1]:
           raise RuntimeError("Inner elements of the exploded path must contain "
                              "the ID connector character (%s), but the path "
-                             "is %s"%(id_connector_character, exploded_path))
+                             "is %s" % (id_connector_character, exploded_path))
         elif node != exploded_path[-1]:
           # integer node IDs must be converted if possible.
           original_node_id = NFFGToolBox.try_to_convert(
-                                         node.split(id_connector_character)[1])
+            node.split(id_connector_character)[1])
           if original_node_id != extracted_path[-1]:
-            # this graph must have such a link, otherwise there wouldn't be a path
+            # this graph must have such a link, otherwise there wouldn't be a
+            #  path
             if 'static_link_id' in exploded_G[last_node][node]:
               extracted_path.append(original_node_id)
               extracted_path_linkids.append(NFFGToolBox.try_to_convert(
-                                  exploded_G[last_node][node]['static_link_id']))
+                exploded_G[last_node][node]['static_link_id']))
         else:
           # The last node is added by the exploded path's one-before-last
           # element, so this branch would be skipped anyway to avoid duplicating
