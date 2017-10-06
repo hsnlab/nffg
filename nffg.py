@@ -1527,6 +1527,24 @@ class NFFGToolBox(object):
     return nffg
 
   @classmethod
+  def extract_domain (cls, nffg, domain, log=logging.getLogger("EXTRACT")):
+    """
+    Extract domain view from given :class:``NFFG``.
+
+    :param nffg: mapped NFFG object
+    :type nffg: :class:`NFFG`
+    :param domain: extracted domain name
+    :type domain: str
+    :param log: additional logger
+    :type log: :any:`logging.Logger`
+    :return: extracted domain NFFG
+    :rtype: :class:`NFFG`
+    """
+    return cls.recreate_inter_domain_SAPs(nffg=cls.strip_domain(nffg=nffg,
+                                                                domain=domain,
+                                                                log=log))
+
+  @classmethod
   def split_into_domains (cls, nffg, log=logging.getLogger("SPLIT")):
     """
     Split given :class:`NFFG` into separate parts self._global_nffg on
