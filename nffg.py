@@ -2778,8 +2778,7 @@ class NFFGToolBox(object):
         if fr.id == fr_id:
           return fr, p
     else:
-      raise RuntimeError("Couldn't find Flowrule for SGHop %s in Infra %s!"
-                         % (fr_id, infra.id))
+      return None, None
 
   @staticmethod
   def get_inport_of_flowrule (infra, fr_id):
@@ -2868,7 +2867,7 @@ class NFFGToolBox(object):
                          " SGHop!" % fr_sg.id)
 
   @staticmethod
-  def get_all_sghop_info (nffg, return_paths=False):
+  def get_all_sghop_info (nffg, return_paths=False, log=logging.getLogger("SG-RECREATE")):
     """
     Returns a dictionary keyed by sghopid, data is [PortObjsrc,
     PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay,
@@ -2891,68 +2890,79 @@ class NFFGToolBox(object):
     :return: extracted values
     :rtype: dict
     """
+    class MissingFlowruleEndingPort(Exception):
+      pass
     sg_map = {}
     for i in nffg.infras:
       for p in i.ports:
         for fr in p.flowrules:
-          # if fr.external:
-          #   continue
-          if fr.id not in sg_map:
-            # The path is unordered!!
-            path_of_shop = []
-            flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
-            additional_action = NFFGToolBox._extract_additional_actions(
-              fr.action.split(";"))
-            sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay,
-                             fr.constraints, additional_action]
-            # We have to find the BEGINNING of this flowrule sequence.
-            inbound_link = NFFGToolBox._find_infra_link(nffg, p, outbound=False,
-                                                        accept_dyn=True)
-            while inbound_link.type != 'DYNAMIC':
-              path_of_shop.append(inbound_link)
-              if inbound_link.src.node.type == 'SAP':
-                break
-              # The link is STATIC, and its src is not SAP so it is an Infra.
-              prev_fr, prev_p = \
-                NFFGToolBox._get_flowrule_and_its_starting_port(
-                  inbound_link.src.node, fr.id)
-              NFFGToolBox._check_flow_consistency(sg_map, prev_fr)
-              inbound_link = NFFGToolBox._find_infra_link(nffg, prev_p,
-                                                          outbound=False,
+          try:
+            # if fr.external:
+            #   continue
+            if fr.id not in sg_map:
+              # The path is unordered!!
+              path_of_shop = []
+              flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
+              additional_action = NFFGToolBox._extract_additional_actions(
+                fr.action.split(";"))
+              sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay,
+                               fr.constraints, additional_action]
+              # We have to find the BEGINNING of this flowrule sequence.
+              inbound_link = NFFGToolBox._find_infra_link(nffg, p, outbound=False,
                                                           accept_dyn=True)
-            # 'inbound_link' is DYNAMIC here or it is STATIC and starts from
-            # a SAP,
-            # so the sequence starts here
-            sg_map[fr.id][0] = inbound_link.src
+              while inbound_link.type != 'DYNAMIC':
+                path_of_shop.append(inbound_link)
+                if inbound_link.src.node.type == 'SAP':
+                  break
+                # The link is STATIC, and its src is not SAP so it is an Infra.
+                prev_fr, prev_p = \
+                  NFFGToolBox._get_flowrule_and_its_starting_port(
+                    inbound_link.src.node, fr.id)
+                if prev_fr == None:
+                  raise MissingFlowruleEndingPort()
+                NFFGToolBox._check_flow_consistency(sg_map, prev_fr)
+                inbound_link = NFFGToolBox._find_infra_link(nffg, prev_p,
+                                                            outbound=False,
+                                                            accept_dyn=True)
+              # 'inbound_link' is DYNAMIC here or it is STATIC and starts from
+              # a SAP,
+              # so the sequence starts here
+              sg_map[fr.id][0] = inbound_link.src
 
-            # We have to find the ENDING of this flowrule sequence.
-            output_port = NFFGToolBox.get_output_port_of_flowrule(i, fr)
-            if output_port is None:
-              continue
-            outbound_link = NFFGToolBox._find_infra_link(nffg, output_port,
-                                                         outbound=True,
-                                                         accept_dyn=True)
-            while outbound_link.type != 'DYNAMIC':
-              path_of_shop.append(outbound_link)
-              if outbound_link.dst.node.type == 'SAP':
-                break
-              # The link is STATIC and its dst is not a SAP so it is an Infra.
-              next_fr, _ = NFFGToolBox._get_flowrule_and_its_starting_port(
-                outbound_link.dst.node, fr.id)
-              # '_' is 'outbound_link.dst'
-              next_output_port = NFFGToolBox.get_output_port_of_flowrule(
-                outbound_link.dst.node, next_fr)
-              NFFGToolBox._check_flow_consistency(sg_map, next_fr)
-              outbound_link = NFFGToolBox._find_infra_link(nffg,
-                                                           next_output_port,
+              # We have to find the ENDING of this flowrule sequence.
+              output_port = NFFGToolBox.get_output_port_of_flowrule(i, fr)
+              if output_port is None:
+                continue
+              outbound_link = NFFGToolBox._find_infra_link(nffg, output_port,
                                                            outbound=True,
                                                            accept_dyn=True)
-            # the 'outbound_link' is DYNAMIC here or finishes in a SAP, so the
-            # flowrule sequence finished here.
-            sg_map[fr.id][1] = outbound_link.dst
+              while outbound_link.type != 'DYNAMIC':
+                path_of_shop.append(outbound_link)
+                if outbound_link.dst.node.type == 'SAP':
+                  break
+                # The link is STATIC and its dst is not a SAP so it is an Infra.
+                next_fr, _ = NFFGToolBox._get_flowrule_and_its_starting_port(
+                  outbound_link.dst.node, fr.id)
+                if next_fr == None:
+                  raise MissingFlowruleEndingPort()
+                # '_' is 'outbound_link.dst'
+                next_output_port = NFFGToolBox.get_output_port_of_flowrule(
+                  outbound_link.dst.node, next_fr)
+                NFFGToolBox._check_flow_consistency(sg_map, next_fr)
+                outbound_link = NFFGToolBox._find_infra_link(nffg,
+                                                             next_output_port,
+                                                             outbound=True,
+                                                             accept_dyn=True)
+              # the 'outbound_link' is DYNAMIC here or finishes in a SAP, so the
+              # flowrule sequence finished here.
+              sg_map[fr.id][1] = outbound_link.dst
 
-            if return_paths:
-              sg_map[fr.id].append(path_of_shop)
+              if return_paths:
+                sg_map[fr.id].append(path_of_shop)
+          except MissingFlowruleEndingPort:
+            del sg_map[fr.id]
+            log.warn("Couldn't find Flowrule for SGHop %s in Infra %s!" %
+                     (fr.id, i.id))
 
     return sg_map
 
