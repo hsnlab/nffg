@@ -2577,7 +2577,7 @@ class NFFGToolBox(object):
                               minuend.network.out_edges_iter):
               for i, j, data in edge_func([n], data=True):
                 if data.type == 'SG':
-                  minuend.del_flowrules_of_SGHop(d.id)
+                  minuend.del_flowrules_of_SGHop(data.id)
             minuend.del_node(minuend.network.node[n])
     for i, j, k, d in subtrahend.network.edges_iter(keys=True, data=True):
       if minuend.network.has_edge(i, j, key=k):
