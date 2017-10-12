@@ -2044,7 +2044,7 @@ class NFFGToolBox(object):
                   % (src, dst, latency_paths[src][dst]))
     # Recreate flowrules based on NBalazs functions
     sg_hop_info = NFFGToolBox.get_all_sghop_info(nffg=nffg)
-    log.debug("Detected SG hop info:\n%s" % pprint.pformat(sg_hop_info))
+    log.log(VERBOSE, "Detected SG hop info:\n%s" % pprint.pformat(sg_hop_info))
     log.debug("Recreate flowrules...")
     for sg_id, value in sg_hop_info.iteritems():
       sg_src_node = value[0].node.id
@@ -2054,6 +2054,7 @@ class NFFGToolBox(object):
       flowclass = value[2]
       fr_bw = value[3]
       fr_delay = value[4]
+      fr_const = deepcopy(value[5])
       fr_hop = sg_id
       sbb_src_port = [l.dst for u, v, l in
                       sbb.network.out_edges_iter(sg_src_node, data=True) if
@@ -2097,7 +2098,8 @@ class NFFGToolBox(object):
                                      match=fr_match,
                                      action=fr_action,
                                      bandwidth=fr_bw,
-                                     delay=fr_delay, )
+                                     delay=fr_delay,
+                                     constraints=fr_const)
       log.debug("Added flowrule: %s" % fr)
     if add_sg_hops:
       log.debug("Recreate SG hops...")
@@ -2107,12 +2109,14 @@ class NFFGToolBox(object):
         hop_fc = value[2]
         hop_bw = value[3]
         hop_delay = value[4]
+        hop_const = deepcopy(value[5])
         sg = sbb.add_sglink(id=sg_id,
                             src_port=sg_src_port,
                             dst_port=sg_dst_port,
                             flowclass=hop_fc,
                             delay=hop_delay,
-                            bandwidth=hop_bw)
+                            bandwidth=hop_bw,
+                            constraints=hop_const)
         log.debug("Added SG hop: %s" % sg)
     else:
       log.debug("Skip SG hop recreation for the SingleBiSBiS!")
@@ -2867,7 +2871,8 @@ class NFFGToolBox(object):
                          " SGHop!" % fr_sg.id)
 
   @staticmethod
-  def get_all_sghop_info (nffg, return_paths=False, log=logging.getLogger("SG-RECREATE")):
+  def get_all_sghop_info (nffg, return_paths=False,
+                          log=logging.getLogger("SG-RECREATE")):
     """
     Returns a dictionary keyed by sghopid, data is [PortObjsrc,
     PortObjdst, SGHop.flowclass, SGHop.bandwidth, SGHop.delay,
@@ -2890,8 +2895,10 @@ class NFFGToolBox(object):
     :return: extracted values
     :rtype: dict
     """
+
     class MissingFlowruleEndingPort(Exception):
       pass
+
     sg_map = {}
     for i in nffg.infras:
       for p in i.ports:
@@ -2908,7 +2915,8 @@ class NFFGToolBox(object):
               sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay,
                                fr.constraints, additional_action]
               # We have to find the BEGINNING of this flowrule sequence.
-              inbound_link = NFFGToolBox._find_infra_link(nffg, p, outbound=False,
+              inbound_link = NFFGToolBox._find_infra_link(nffg, p,
+                                                          outbound=False,
                                                           accept_dyn=True)
               while inbound_link.type != 'DYNAMIC':
                 path_of_shop.append(inbound_link)

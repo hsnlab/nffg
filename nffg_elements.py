@@ -968,10 +968,10 @@ class Constraints(Persistable):
     Init.
     """
     super(Constraints, self).__init__()
-    self.affinity = {}
-    self.antiaffinity = {}
+    self.affinity = OrderedDict()
+    self.antiaffinity = OrderedDict()
     self.variable = OrderedDict()
-    self.constraint = {}
+    self.constraint = OrderedDict()
 
   def add_affinity (self, id, value):
     """
@@ -1147,7 +1147,7 @@ class Constraints(Persistable):
     self.affinity = data.get('affinity', OrderedDict())
     self.antiaffinity = data.get('antiaffinity', OrderedDict())
     self.variable = data.get('variable', OrderedDict())
-    self.constraint = data.get('constraint', [])
+    self.constraint = data.get('constraint', OrderedDict())
     return self
 
 
@@ -1994,14 +1994,8 @@ class InfraPort(Port):
     :return: None
     """
     super(InfraPort, self).load(data=data)
-    for flowrule in data.get('flowrules', ()):
-      self.add_flowrule(
-        id=flowrule['id'],
-        match=flowrule.get('match'),
-        action=flowrule.get('action'),
-        delay=float(flowrule['delay']) if 'delay' in flowrule else None,
-        bandwidth=float(
-          flowrule['bandwidth']) if 'bandwidth' in flowrule else None)
+    for fr in data.get('flowrules', ()):
+      self.flowrules.append(Flowrule().load(data=fr))
 
 
 ################################################################################
