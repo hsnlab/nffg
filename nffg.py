@@ -3442,8 +3442,7 @@ class NFFGToolBox(object):
         path_with_original_node_ids_no_duplicates_str = map(
           lambda node_id: NFFGToolBox.try_to_convert(node_id),
           path_with_original_node_ids_no_duplicates)
-        min_length_paths[NFFGToolBox.try_to_convert(original_starting_node)][
-          NFFGToolBox.try_to_convert(original_ending_node)] = \
+        min_length_paths[original_starting_node][original_ending_node] = \
           path_with_original_node_ids_no_duplicates_str
 
     # convert embedded default dicts
