@@ -1115,7 +1115,10 @@ class Constraints(Persistable):
     :return: removed value
     :rtype: str or int
     """
-    return self.constraint.pop(id, None)
+    if id in self.constraint:
+      return self.constraint.pop(id)
+    else:
+      return None
 
   def persist (self):
     """
