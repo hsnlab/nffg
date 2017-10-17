@@ -519,13 +519,13 @@ class Port(Element):
   ROLE_PROVIDER = "provider"
 
   __slots__ = ('__node', 'properties', 'metadata', 'name', 'sap', 'capability',
-               'technology', 'role', 'delay', 'bandwidth', 'cost', 'controller',
-               'orchestrator', 'l2', 'l3', 'l4')
+               'technology', 'role', 'delay', 'bandwidth', 'cost', 'qos',
+               'controller', 'orchestrator', 'l2', 'l3', 'l4')
 
   def __init__ (self, node, id=None, name=None, properties=None, sap=None,
                 capability=None, technology=None, role=None, delay=None,
-                bandwidth=None, cost=None, controller=None, orchestrator=None,
-                l2=None, l4=None, metadata=None):
+                bandwidth=None, cost=None, qos=None, controller=None,
+                orchestrator=None, l2=None, l4=None, metadata=None):
     """
     Init.
 
@@ -549,6 +549,8 @@ class Port(Element):
     :type bandwidth: float
     :param cost: cost
     :type cost: str
+    :param qos: traffic QoS class
+    :type qos: str
     :param controller: controller URL
     :type controller: str
     :param orchestrator: orchestrator URL
@@ -583,6 +585,7 @@ class Port(Element):
     self.delay = delay
     self.bandwidth = bandwidth
     self.cost = cost
+    self.qos = qos
     # control
     self.controller = controller
     self.orchestrator = orchestrator
@@ -739,6 +742,8 @@ class Port(Element):
           port['sap_data']['resources']['bandwidth'] = self.bandwidth
         if self.cost is not None:
           port['sap_data']['resources']['cost'] = self.cost
+        if self.qos is not None:
+          port['sap_data']['resources']['qos'] = self.qos
     if any(v is not None for v in (self.controller, self.orchestrator)):
       port['control'] = {}
       if self.controller is not None:
@@ -778,6 +783,7 @@ class Port(Element):
         self.delay = data['sap_data']['resources'].get('delay')
         self.bandwidth = data['sap_data']['resources'].get('bandwidth')
         self.cost = data['sap_data']['resources'].get('cost')
+        self.qos = data['sap_data']['resources'].get('qos')
     else:
       self.technology = self.delay = self.bandwidth = self.cost = None
     if 'control' in data:
@@ -961,7 +967,8 @@ class Constraints(Persistable):
   Container class for constraints.
   """
 
-  __slots__ = ('affinity', 'antiaffinity', 'variable', 'constraint')
+  __slots__ = ('affinity', 'antiaffinity', 'variable', 'constraint',
+               'restorability')
 
   def __init__ (self):
     """
@@ -972,6 +979,7 @@ class Constraints(Persistable):
     self.antiaffinity = OrderedDict()
     self.variable = OrderedDict()
     self.constraint = OrderedDict()
+    self.restorability = None
 
   def add_affinity (self, id, value):
     """
@@ -1136,6 +1144,8 @@ class Constraints(Persistable):
       constraints['variable'] = self.variable
     if self.constraint:
       constraints['constraint'] = self.constraint
+    if self.restorability:
+      constraints['restorability'] = self.restorability
     return constraints
 
   def load (self, data, *args, **kwargs):
@@ -1151,6 +1161,7 @@ class Constraints(Persistable):
     self.antiaffinity = data.get('antiaffinity', OrderedDict())
     self.variable = data.get('variable', OrderedDict())
     self.constraint = data.get('constraint', OrderedDict())
+    self.restorability = data.get('restorability')
     return self
 
 
@@ -1782,11 +1793,11 @@ class Flowrule(Element):
   Class for storing a flowrule.
   """
 
-  __slots__ = ('match', 'action', 'bandwidth', 'delay', 'external',
-               'constraints')
+  __slots__ = ('match', 'action', 'bandwidth', 'delay', 'cost', 'qos',
+               'external', 'constraints')
 
   def __init__ (self, id=None, match="", action="", bandwidth=None, delay=None,
-                external=False, constraints=None):
+                cost=None, qos=None, external=False, constraints=None):
     """
     Init.
 
@@ -1807,6 +1818,8 @@ class Flowrule(Element):
     self.action = action  # mandatory
     self.bandwidth = bandwidth
     self.delay = delay
+    self.cost = cost
+    self.qos = qos
     self.external = external
     self.constraints = constraints if constraints is not None else Constraints()
 
@@ -1826,6 +1839,10 @@ class Flowrule(Element):
       flowrule['bandwidth'] = self.bandwidth
     if self.delay:
       flowrule['delay'] = self.delay
+    if self.cost:
+      flowrule['cost'] = self.cost
+    if self.qos:
+      flowrule['qos'] = self.qos
     if self.external:
       flowrule['external'] = self.external
     constraints = self.constraints.persist()
@@ -1846,6 +1863,8 @@ class Flowrule(Element):
     self.action = data.get('action')
     self.bandwidth = float(data['bandwidth']) if 'bandwidth' in data else None
     self.delay = float(data['delay']) if 'delay' in data else None
+    self.cost = data.get('cost')
+    self.qos = data.get('qos')
     self.external = float(data['external']) if 'external' in data else False
     if 'constraints' in data:
       self.constraints.load(data=data['constraints'])
@@ -1858,10 +1877,10 @@ class Flowrule(Element):
     :return: specific representation
     :rtype: str
     """
-    return "Flowrule object:\nmatch: %s \naction: %s \nbandwidth: " \
-           "%s \ndelay: %s \nexternal: %s" % (self.match, self.action,
-                                              self.bandwidth, self.delay,
-                                              self.external)
+    return "Flowrule object:\nmatch: %s\naction: %s\nbandwidth: " \
+           "%s\ndelay: %s\ncost: %s\nqos: %s\nexternal: %s" \
+           % (self.match, self.action, self.bandwidth, self.delay, self.cost,
+              self.qos, self.external)
 
   def __str__ (self):
     """
@@ -1871,9 +1890,11 @@ class Flowrule(Element):
     :rtype: str
     """
     return "%s(id:%s, match: %s, action: %s, bandwidth: %s, delay: %s," \
-           " external: %s)" % (self.__class__.__name__, self.id, self.match,
-                               self.action, self.bandwidth, self.delay,
-                               self.external)
+           "cost: %s, qos: %s, external: %s)" % (self.__class__.__name__,
+                                                 self.id, self.match,
+                                                 self.action, self.bandwidth,
+                                                 self.delay, self.cost,
+                                                 self.qos, self.external)
 
 
 class InfraPort(Port):
@@ -1910,8 +1931,8 @@ class InfraPort(Port):
                                     metadata=metadata)
     self.flowrules = []
 
-  def add_flowrule (self, match, action, bandwidth=None, delay=None, id=None,
-                    external=False, constraints=None):
+  def add_flowrule (self, match, action, bandwidth=None, delay=None, cost=None,
+                    qos=None, id=None, external=False, constraints=None):
     """
     Add a flowrule with the given params to the port of an Infrastructure Node.
 
@@ -1933,7 +1954,8 @@ class InfraPort(Port):
     :rtype: :any:`Flowrule`
     """
     flowrule = Flowrule(id=id, match=match, action=action, bandwidth=bandwidth,
-                        delay=delay, external=external, constraints=constraints)
+                        delay=delay, cost=cost, qos=qos, external=external,
+                        constraints=constraints)
     self.flowrules.append(flowrule)
     return flowrule
 
@@ -2398,10 +2420,11 @@ class EdgeLink(Link):
   Represent a static or dynamic link.
   """
 
-  __slots__ = ('backward', 'delay', 'bandwidth', 'availbandwidth', 'weight')
+  __slots__ = ('backward', 'delay', 'bandwidth', 'cost', 'qos',
+               'availbandwidth', 'weight')
 
   def __init__ (self, src=None, dst=None, type=None, id=None, backward=False,
-                delay=None, bandwidth=None):
+                delay=None, bandwidth=None, cost=None, qos=None):
     """
     Init.
 
@@ -2419,6 +2442,10 @@ class EdgeLink(Link):
     :type delay: float
     :param bandwidth: bandwidth resource
     :type bandwidth: float
+    :param cost: cost
+    :type cost: str
+    :param qos: traffic QoS class
+    :type qos: str
     :return: None
     """
     type = type if type is not None else Link.STATIC
@@ -2428,6 +2455,8 @@ class EdgeLink(Link):
     self.backward = backward  # always False by default
     self.delay = delay  # optional
     self.bandwidth = bandwidth  # optional
+    self.cost = cost
+    self.qos = qos
     # Internal attributes for mapping
     self.availbandwidth = None
     self.weight = None
@@ -2444,6 +2473,10 @@ class EdgeLink(Link):
       link["delay"] = self.delay
     if self.bandwidth is not None:
       link["bandwidth"] = self.bandwidth
+    if self.cost is not None:
+      link["cost"] = self.cost
+    if self.qos is not None:
+      link["qos"] = self.qos
     if self.backward:
       link["backward"] = self.backward
     return link
@@ -2465,8 +2498,10 @@ class EdgeLink(Link):
       if link.id == data['id']:
         raise RuntimeError("ID conflict during EdgeLink loading: %s" % link.id)
     super(EdgeLink, self).load(data=data, container=container)
-    self.delay = data.get('delay')
+    self.delay = float(data['delay']) if 'delay' in data else None
     self.bandwidth = float(data['bandwidth']) if 'bandwidth' in data else None
+    self.cost = data.get('cost')
+    self.qos = data.get('qos')
     self.backward = data.get('backward', False)
     return self
 
@@ -2478,9 +2513,10 @@ class EdgeLink(Link):
     :rtype: str
     """
     return "EdgeLink(id: %s, src: %s[%s], dst: %s[%s], type: %s, backward: " \
-           "%s, delay:%s, bandwidth: %s)" % (
+           "%s, delay:%s, bandwidth: %s, cost: %s, qos: %s)" % (
              self.id, self.src.node.id, self.src.id, self.dst.node.id,
-             self.dst.id, self.type, self.backward, self.delay, self.bandwidth)
+             self.dst.id, self.type, self.backward, self.delay, self.bandwidth,
+             self.cost, self.qos)
 
   def __repr__ (self):
     """

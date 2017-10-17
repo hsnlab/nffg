@@ -573,7 +573,8 @@ class NFFG(AbstractNFFG):
     return infra
 
   def add_link (self, src_port, dst_port, link=None, id=None, dynamic=False,
-                backward=False, delay=None, bandwidth=None):
+                backward=False, delay=None, bandwidth=None, cost=None,
+                qos=None):
     """
     Add a Link to the structure.
 
@@ -593,20 +594,26 @@ class NFFG(AbstractNFFG):
     :type dynamic: bool
     :param bandwidth: bandwidth resource
     :type bandwidth: float
+    :param cost: cost
+    :type cost: str
+    :param qos: traffic QoS class
+    :type qos: str
     :return: newly created edge
     :rtype: :any:`EdgeLink`
     """
     if link is None:
       type = Link.DYNAMIC if dynamic else Link.STATIC
       link = EdgeLink(src=src_port, dst=dst_port, type=type, id=id,
-                      backward=backward, delay=delay, bandwidth=bandwidth)
+                      backward=backward, delay=delay, bandwidth=bandwidth,
+                      cost=cost, qos=qos)
     else:
       link.src, link.dst = src_port, dst_port
     self.add_edge(src_port.node, dst_port.node, link)
     return link
 
   def add_undirected_link (self, port1, port2, p1p2id=None, p2p1id=None,
-                           dynamic=False, delay=None, bandwidth=None):
+                           dynamic=False, delay=None, bandwidth=None,
+                           cost=None, qos=None):
     """
     Add two Links to the structure, in both directions.
 
@@ -624,13 +631,19 @@ class NFFG(AbstractNFFG):
     :type dynamic: bool
     :param bandwidth: bandwidth resource of both links
     :type bandwidth: float
+    :param cost: cost
+    :type cost: str
+    :param qos: traffic QoS class
+    :type qos: str
     :return: newly created edge tuple in (p1->p2, p2->p1)
     :rtype: :any:(`EdgeLink`, `EdgeLink`)
     """
     p1p2Link = self.add_link(port1, port2, id=p1p2id, dynamic=dynamic,
-                             backward=False, delay=delay, bandwidth=bandwidth)
+                             backward=False, delay=delay, bandwidth=bandwidth,
+                             cost=cost, qos=qos)
     p2p1Link = self.add_link(port2, port1, id=p2p1id, dynamic=dynamic,
-                             backward=True, delay=delay, bandwidth=bandwidth)
+                             backward=True, delay=delay, bandwidth=bandwidth,
+                             cost=cost, qos=qos)
     return p1p2Link, p2p1Link
 
   def add_sglink (self, src_port, dst_port, hop=None, id=None, flowclass=None,
