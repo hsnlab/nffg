@@ -1190,6 +1190,8 @@ class NFFGToolBox(object):
   Helper functions for NFFG handling operations, etc.
   """
 
+  DEFAULT_SBB_ID = "SingleBiSBiS"
+
   ##############################################################################
   # ------------------ Splitting/Merging-related functions ---------------------
   ##############################################################################
@@ -1907,7 +1909,8 @@ class NFFGToolBox(object):
   ##############################################################################
 
   @staticmethod
-  def generate_SBB_representation (nffg, add_sg_hops=False,
+  def generate_SBB_representation (nffg, sbb_id=DEFAULT_SBB_ID,
+                                   add_sg_hops=False,
                                    log=logging.getLogger("SBB")):
     """
     Generate the trivial virtual topology a.k.a one BisBis or Single BisBis
@@ -1928,7 +1931,7 @@ class NFFGToolBox(object):
     # Create Single BiSBiS NFFG
     log.debug("Generate trivial SingleBiSBiS NFFG based on %s:" % nffg)
     log.debug("START SBB generation...")
-    sbb = NFFG(id="SingleBiSBiS", name="Single-BiSBiS-View")
+    sbb = NFFG(id=sbb_id, name="Single-BiSBiS-View")
     # Create the single BiSBiS infra
     sbb_infra = sbb.add_infra(id="SingleBiSBiS",
                               name="SingleBiSBiS",
