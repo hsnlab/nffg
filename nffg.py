@@ -1494,9 +1494,12 @@ class NFFGToolBox(object):
     for u, v, link in nffg.network.edges_iter(data=True):
       src_port = base.network.node[u].ports[link.src.id]
       dst_port = base.network.node[v].ports[link.dst.id]
+      tmp_src, tmp_dst = link.src, link.dst
+      link.src = link.dst = None
       c_link = deepcopy(link)
       c_link.src = src_port
       c_link.dst = dst_port
+      link.src, link.dst = tmp_src, tmp_dst
       base.add_link(src_port=src_port, dst_port=dst_port, link=c_link)
       log.debug("Copy Link: %s" % c_link)
     log.debug("Domain merging has been finished!")
@@ -2547,9 +2550,12 @@ class NFFGToolBox(object):
       if not target.network.has_edge(u, v, key=link.id):
         src_port = target.network.node[u].ports[link.src.id]
         dst_port = target.network.node[v].ports[link.dst.id]
+        tmp_src, tmp_dst = link.src, link.dst
+        link.src = link.dst = None
         c_link = deepcopy(link)
         c_link.src = src_port
         c_link.dst = dst_port
+        link.src, link.dst = tmp_src, tmp_dst
         target.add_link(src_port=src_port, dst_port=dst_port, link=c_link)
         log.debug("Copy Link: %s" % c_link)
     return target
