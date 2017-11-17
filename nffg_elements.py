@@ -64,7 +64,11 @@ class Persistable(object):
 
   def copy (self):
     """
-    Return the copy of the object.
+    Return the copy of the object. This copy function is meant to use when a new
+    ``NFFG`` object structure is created. It can handles the references pointed
+    to internal NFFG element in order to avoid unnecessary deep copies. These
+    references are always None in the copied object which are overwritten by
+    adder functions in every case.
 
     :return: copied object
     :rtype: :any:`Element`
@@ -160,16 +164,6 @@ class Element(Persistable):
     self.operation = data.get("operation")  # optional
     self.status = data.get("status")  # optional
     return self
-
-  def copy (self):
-    """
-    Return the copy of the object.
-
-    :return: copied object
-    :rtype: :any:`Element`
-    """
-    from copy import deepcopy
-    return deepcopy(self)
 
   def dump (self):
     """
@@ -566,9 +560,6 @@ class Port(Element):
     super(Port, self).__init__(id=id, type=self.TYPE)
     if not isinstance(node, Node):
       raise RuntimeError("Port's container node must be derived from Node!")
-    # weakref to avoid circular reference
-    # weakref causes some really annoying issue --> changed to normal ref
-    # self.__node = weakref.ref(node)
     self.__node = node
     # Set properties list according to given param type
     self.properties = OrderedDict(properties if properties else {})
@@ -602,8 +593,22 @@ class Port(Element):
     :return: container reference
     :rtype: :any:`Persistable`
     """
-    # return self.__node()
     return self.__node
+
+  def copy (self):
+    """
+    Skip container ``node`` deepcopy in case the :any:`Port` object is copied
+    directly. Deepcopy called on an upper object has already cloned the
+    container node when it gets to a Port object and it will skip the re-cloning
+    due to its internal memoization feature.
+
+    :return: copied object
+    :rtype: :any:`Port`
+    """
+    tmp, self.__node = self.__node, None
+    clone = super(Port, self).copy()
+    self.__node = tmp
+    return clone
 
   @node.deleter
   def node (self):
@@ -1421,7 +1426,7 @@ class Link(Element):
 
   __slots__ = ('src', 'dst', 'constraints')
 
-  def __init__ (self, src=None, dst=None, type=None, id=None, constraints=None):
+  def __init__ (self, src, dst, type=None, id=None, constraints=None):
     """
     Init.
 
@@ -1446,6 +1451,22 @@ class Link(Element):
     # Reference to dst Port object
     self.dst = dst  # mandatory
     self.constraints = constraints if constraints is not None else Constraints()
+
+  def copy (self):
+    """
+    Skip deepcopy of ``src`` and ``dst`` references in case the :any:`Link`
+    object is copied directly. Deepcopy called on an upper object has already
+    cloned the references when it gets to a Port object and it will skip the
+    re-cloning due to its internal memoization feature.
+
+    :return: copied object
+    :rtype: :any:`Link`
+    """
+    tmp_src, tmp_dst = self.src, self.dst
+    self.src = self.dst = None
+    clone = super(Link, self).copy()
+    self.src, self.dst = tmp_src, tmp_dst
+    return clone
 
   def persist (self):
     """
@@ -2423,8 +2444,8 @@ class EdgeLink(Link):
   __slots__ = ('backward', 'delay', 'bandwidth', 'cost', 'qos',
                'availbandwidth', 'weight')
 
-  def __init__ (self, src=None, dst=None, type=None, id=None, backward=False,
-                delay=None, bandwidth=None, cost=None, qos=None):
+  def __init__ (self, src=None, dst=None, type=None, id=None, backward=False, delay=None,
+                bandwidth=None, cost=None, qos=None):
     """
     Init.
 
@@ -2540,8 +2561,8 @@ class EdgeSGLink(Link):
   __slots__ = ('flowclass', 'tag_info', 'delay', 'bandwidth',
                'additional_actions')
 
-  def __init__ (self, src=None, dst=None, id=None, flowclass=None,
-                tag_info=None, delay=None, bandwidth=None, constraints=None,
+  def __init__ (self, src=None, dst=None, id=None, flowclass=None, tag_info=None,
+                delay=None, bandwidth=None, constraints=None,
                 additional_actions=None):
     """
     Init.

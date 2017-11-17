@@ -1072,11 +1072,13 @@ class NFFG(AbstractNFFG):
     :return: deep copy
     :rtype: :class:`NFFG`
     """
-    copy = NFFG(id=self.id, name=self.name, version=self.version,
-                mode=self.mode, metadata=self.metadata.copy(),
-                status=self.status)
-    copy.network = self.network.copy()
-    return copy
+    # copy = NFFG(id=self.id, name=self.name, version=self.version,
+    #             mode=self.mode, metadata=self.metadata.copy(),
+    #             status=self.status)
+    # copy.network = self.network.copy()
+    # return copy
+    from copy import deepcopy
+    return deepcopy(self)
 
   def calculate_available_link_res (self, sg_hops_to_be_ignored,
                                     mode=AbstractNFFG.MODE_ADD):
