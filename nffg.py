@@ -533,8 +533,8 @@ class NFFG(AbstractNFFG):
     return sap_obj
 
   def add_infra (self, infra=None, id=None, name=None, domain=None,
-                 infra_type=None, cpu=None, mem=None, storage=None, delay=None,
-                 bandwidth=None):
+                 infra_type=None, cpu=None, mem=None, storage=None, cost=None,
+                 zone=None, delay=None, bandwidth=None):
     """
     Add an Infrastructure Node to the structure.
 
@@ -554,6 +554,10 @@ class NFFG(AbstractNFFG):
     :type mem: float
     :param storage: storage resource
     :type storage: float
+    :param cost: cost
+    :type cost: str
+    :param zone: zone
+    :type zone: str
     :param delay: delay property of the Node
     :type delay: float
     :param bandwidth: bandwidth property of the Node
@@ -563,8 +567,8 @@ class NFFG(AbstractNFFG):
     """
     if infra is None:
       if any(i is not None for i in (cpu, mem, storage, delay, bandwidth)):
-        res = NodeResource(cpu=cpu, mem=mem, storage=storage,
-                           bandwidth=bandwidth, delay=delay)
+        res = NodeResource(cpu=cpu, mem=mem, storage=storage, cost=cost,
+                           zone=zone, bandwidth=bandwidth, delay=delay)
       else:
         res = None
       infra = NodeInfra(id=id, name=name, domain=domain, infra_type=infra_type,

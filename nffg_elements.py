@@ -1641,10 +1641,10 @@ class NodeResource(Persistable):
   Class for storing resource information for Nodes.
   """
 
-  __slots__ = ('cpu', 'mem', 'storage', 'delay', 'bandwidth')
+  __slots__ = ('cpu', 'mem', 'storage', 'cost', 'zone', 'delay', 'bandwidth')
 
-  def __init__ (self, cpu=None, mem=None, storage=None, delay=None,
-                bandwidth=None):
+  def __init__ (self, cpu=None, mem=None, storage=None, cost=None, zone=None,
+                delay=None, bandwidth=None):
     """
     Init.
 
@@ -1654,6 +1654,10 @@ class NodeResource(Persistable):
     :type mem: float
     :param storage: storage resource
     :type storage: float
+    :param cost: cost
+    :type cost: str
+    :param zone: zone
+    :type zone: str
     :param delay: delay property of the Node
     :type delay: float
     :param bandwidth: bandwidth property of the Node
@@ -1664,8 +1668,10 @@ class NodeResource(Persistable):
     # container: compute
     self.cpu = cpu
     self.mem = mem
-    # container
     self.storage = storage
+    # container
+    self.cost = cost
+    self.zone = zone
     self.delay = delay
     self.bandwidth = bandwidth
 
@@ -1724,6 +1730,10 @@ class NodeResource(Persistable):
       res["mem"] = self.mem
     if self.storage is not None:
       res["storage"] = self.storage
+    if self.cost is not None:
+      res["cost"] = self.cost
+    if self.zone is not None:
+      res["zone"] = self.zone
     if self.delay is not None:
       res["delay"] = self.delay
     if self.bandwidth is not None:
@@ -1741,6 +1751,8 @@ class NodeResource(Persistable):
     self.cpu = float(data['cpu']) if 'cpu' in data else None
     self.mem = float(data['mem']) if 'mem' in data else None
     self.storage = float(data['storage']) if 'storage' in data else None
+    self.cost = data['cost'] if 'cost' in data else None
+    self.zone = float(data['zone']) if 'zone' in data else None
     self.delay = float(data['delay']) if 'delay' in data else None
     self.bandwidth = float(data['bandwidth']) if 'bandwidth' in data else None
     return self
@@ -1783,10 +1795,10 @@ class NodeResource(Persistable):
     :return: specific representation
     :rtype: str
     """
-    return "Resources of %s:\ncpu: %s\nmem: %s\nstorage: %s\nbandwidth: " \
-           "%s\ndelay: %s" % (
+    return "Resources of %s:\ncpu: %s\nmem: %s\nstorage: %s\ncost: %s" \
+           "\nzone: %s\nbandwidth: %s\ndelay: %s" % (
              self.__class__.__name__, self.cpu, self.mem, self.storage,
-             self.bandwidth, self.delay)
+             self.cost, self.zone, self.bandwidth, self.delay)
 
   def __str__ (self):
     """
@@ -1795,8 +1807,9 @@ class NodeResource(Persistable):
     :return: string representation
     :rtype: str
     """
-    return "cpu: %s mem: %s storage: %s bandwidth: %s delay: %s" % (
-      self.cpu, self.mem, self.storage, self.bandwidth, self.delay)
+    return "cpu: %s mem: %s storage: %s cost: %s zone: %s bandwidth: %s" \
+           " delay: %s" % (self.cpu, self.mem, self.storage, self.cost,
+                           self.zone, self.bandwidth, self.delay)
 
   def is_empty (self):
     """
@@ -1805,8 +1818,8 @@ class NodeResource(Persistable):
     :return: resource values are set or not
     :rtype: bool
     """
-    return False if any(
-      (self.cpu, self.mem, self.storage, self.delay, self.bandwidth)) else True
+    return False if any((self.cpu, self.mem, self.storage, self.cost, self.zone,
+                         self.delay, self.bandwidth)) else True
 
 
 class Flowrule(Element):
@@ -2444,7 +2457,8 @@ class EdgeLink(Link):
   __slots__ = ('backward', 'delay', 'bandwidth', 'cost', 'qos',
                'availbandwidth', 'weight')
 
-  def __init__ (self, src=None, dst=None, type=None, id=None, backward=False, delay=None,
+  def __init__ (self, src=None, dst=None, type=None, id=None, backward=False,
+                delay=None,
                 bandwidth=None, cost=None, qos=None):
     """
     Init.
@@ -2561,7 +2575,8 @@ class EdgeSGLink(Link):
   __slots__ = ('flowclass', 'tag_info', 'delay', 'bandwidth',
                'additional_actions')
 
-  def __init__ (self, src=None, dst=None, id=None, flowclass=None, tag_info=None,
+  def __init__ (self, src=None, dst=None, id=None, flowclass=None,
+                tag_info=None,
                 delay=None, bandwidth=None, constraints=None,
                 additional_actions=None):
     """
