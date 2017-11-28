@@ -1656,7 +1656,7 @@ class NodeResource(Persistable):
     :param storage: storage resource
     :type storage: float
     :param cost: cost
-    :type cost: str
+    :type cost: float
     :param zone: zone
     :type zone: str
     :param delay: delay property of the Node

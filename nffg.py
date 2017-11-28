@@ -451,7 +451,8 @@ class NFFG(AbstractNFFG):
       return False
 
   def add_nf (self, nf=None, id=None, name=None, func_type=None, dep_type=None,
-              cpu=None, mem=None, storage=None, delay=None, bandwidth=None):
+              cpu=None, mem=None, storage=None, cost=None, delay=None,
+              bandwidth=None):
     """
     Add a Network Function to the structure.
 
@@ -471,6 +472,8 @@ class NFFG(AbstractNFFG):
     :type mem: float
     :param storage: storage resource
     :type storage: float
+    :type cost: float
+    :param cost: NF cost deployement limit.
     :param delay: delay property of the Node
     :type delay: float
     :param bandwidth: bandwidth property of the Node
@@ -481,7 +484,7 @@ class NFFG(AbstractNFFG):
     if nf is None:
       if any(i is not None for i in (cpu, mem, storage, delay, bandwidth)):
         res = NodeResource(cpu=cpu, mem=mem, storage=storage, delay=delay,
-                           bandwidth=bandwidth)
+                           bandwidth=bandwidth, cost=cost)
       else:
         res = None
       nf = NodeNF(id=id, name=name, func_type=func_type, dep_type=dep_type,
