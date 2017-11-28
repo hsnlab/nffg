@@ -2080,6 +2080,7 @@ class NFFGToolBox(object):
       fr_bw = value[3]
       fr_delay = value[4]
       fr_const = deepcopy(value[5])
+      fr_extra = value[6]
       fr_hop = sg_id
       sbb_src_port = [l.dst for u, v, l in
                       sbb.network.out_edges_iter(sg_src_node, data=True) if
@@ -2114,6 +2115,8 @@ class NFFGToolBox(object):
       else:
         fr_match = "in_port=%s" % sbb_src_port.id
       fr_action = "output=%s" % sbb_dst_port.id
+      if fr_extra is not None:
+        fr_action += ";%s" % fr_extra
       if value[0].node.type == NFFG.TYPE_SAP and \
             value[1].node.type == NFFG.TYPE_NF and \
             value[0].sap is not None:

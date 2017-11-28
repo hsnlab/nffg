@@ -511,6 +511,7 @@ class Port(Element):
   """Port type"""
   ROLE_CONSUMER = "consumer"
   ROLE_PROVIDER = "provider"
+  ROLE_EXTERNAL = "EXTERNAL"
 
   __slots__ = ('__node', 'properties', 'metadata', 'name', 'sap', 'capability',
                'technology', 'role', 'delay', 'bandwidth', 'cost', 'qos',
