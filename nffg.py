@@ -2029,6 +2029,11 @@ class NFFGToolBox(object):
     delay_matrix_cache = {}
     # Add existing SAPs and their connections to the SingleBiSBiS infra
     for sap in nffg.saps:
+      for p in sap.ports:
+        if str(p.id).startswith("EXTERNAL"):
+          log.debug("Detected EXTERNAL port: %s in SAP: %s! Skip adding..."
+                    % (p.id, sap.id))
+          continue
       c_sap = sbb.add_sap(sap_obj=sap.copy())
       log.debug("Added SAP: %s" % c_sap)
       log.log(VERBOSE, "SAP:\n%s" % c_sap.dump())
@@ -2998,13 +3003,13 @@ class NFFGToolBox(object):
               sg_map[fr.id][1] = outbound_link.dst
               # the additional action is only present in the last flowrule of
               # the flowrule sequence.
-              for last_fr in nffg.network.node[outbound_link.src.node.id].\
-                                                             flowrules():
+              for last_fr in nffg.network.node[outbound_link.src.node.id]. \
+                 flowrules():
                 # we need to retrieve this last flowrule
                 if last_fr.id == fr.id:
                   # extract the additional action if there is any
                   additional_action = NFFGToolBox._extract_additional_actions(
-                                                  last_fr.action.split(";"))
+                    last_fr.action.split(";"))
                   sg_map[fr.id][6] = additional_action
                   break
 
