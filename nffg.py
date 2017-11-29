@@ -2944,10 +2944,8 @@ class NFFGToolBox(object):
               # The path is unordered!!
               path_of_shop = []
               flowclass = NFFGToolBox._extract_flowclass(fr.match.split(";"))
-              additional_action = NFFGToolBox._extract_additional_actions(
-                fr.action.split(";"))
               sg_map[fr.id] = [None, None, flowclass, fr.bandwidth, fr.delay,
-                               fr.constraints, additional_action]
+                               fr.constraints, None]
               # We have to find the BEGINNING of this flowrule sequence.
               inbound_link = NFFGToolBox._find_infra_link(nffg, p,
                                                           outbound=False,
@@ -2998,6 +2996,17 @@ class NFFGToolBox(object):
               # the 'outbound_link' is DYNAMIC here or finishes in a SAP, so the
               # flowrule sequence finished here.
               sg_map[fr.id][1] = outbound_link.dst
+              # the additional action is only present in the last flowrule of
+              # the flowrule sequence.
+              for last_fr in nffg.network.node[outbound_link.src.node.id].\
+                                                             flowrules():
+                # we need to retrieve this last flowrule
+                if last_fr.id == fr.id:
+                  # extract the additional action if there is any
+                  additional_action = NFFGToolBox._extract_additional_actions(
+                                                  last_fr.action.split(";"))
+                  sg_map[fr.id][6] = additional_action
+                  break
 
               if return_paths:
                 sg_map[fr.id].append(path_of_shop)
