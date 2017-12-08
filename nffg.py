@@ -1726,7 +1726,7 @@ class NFFGToolBox(object):
           log.debug("Manually extended match field: %s" % flowrule.match)
 
   @classmethod
-  def rewrite_interdomain_tags (cls, slices,
+  def rewrite_interdomain_tags (cls, slices, flowrule_stitching=None,
                                 log=logging.getLogger("adaptation.TAG")):
     """
     Calculate and rewrite inter-domain tags.
