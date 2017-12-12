@@ -37,7 +37,7 @@ setup(name=MODULE_NAME,
       maintainer_email="czentye@tmit.bme.hu",
       license="Apache 2.0",
       install_requires=[
-        "networkx>=1.11"
+        "networkx~=1.10"
       ],
       package_dir={MODULE_NAME: "."},
       packages=[MODULE_NAME],
