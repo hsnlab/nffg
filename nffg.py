@@ -17,17 +17,20 @@ as building, parsing, processing NF-FG, helper functions, etc.
 """
 import copy
 import itertools
+import json
 import logging
 import math
 import pprint
 import re
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from copy import deepcopy
 
-import networkx
+import networkx as nx
 from networkx.exception import NetworkXError
 
-from nffg_elements import *
+from .nffg_elements import (Node, NodeNF, NodeInfra, NodeResource, NodeSAP,
+                            Link, EdgeSGLink, EdgeLink, EdgeReq, Port, Flowrule,
+                            NFFGModel, Element)
 
 VERSION = "1.0"
 VERBOSE = 5
@@ -227,7 +230,7 @@ class NFFG(AbstractNFFG):
     :return: None
     """
     super(NFFG, self).__init__()
-    self.network = networkx.MultiDiGraph()
+    self.network = nx.MultiDiGraph()
     self.id = str(id) if id is not None else Element.generate_unique_id()
     self.name = name
     self.service_id = service_id
@@ -828,7 +831,7 @@ class NFFG(AbstractNFFG):
     # Load Links
     for link in model.edge_links:
       if link.src.node.type == NFFG.TYPE_NF or \
-            link.dst.node.type == NFFG.TYPE_NF:
+         link.dst.node.type == NFFG.TYPE_NF:
         link.type = str(NFFG.TYPE_LINK_DYNAMIC)
       nffg.add_edge(link.src.node, link.dst.node, link)
     # Load SG next hops
@@ -988,7 +991,7 @@ class NFFG(AbstractNFFG):
     # Collect backward links
     backwards = [(src, dst, key) for src, dst, key, link in
                  self.network.edges_iter(keys=True, data=True) if (
-                   link.type == Link.STATIC or link.type == Link.DYNAMIC) and
+                    link.type == Link.STATIC or link.type == Link.DYNAMIC) and
                  link.backward is True]
     # Delete backwards links
     for link in backwards:
@@ -1338,7 +1341,7 @@ class NFFGToolBox(object):
     orphaned = {n for n in nffg} - detected
     for node in orphaned:
       if domain and nffg[node].type == NFFG.TYPE_INFRA and \
-            nffg[node].domain != domain:
+         nffg[node].domain != domain:
         log.warning("Found orphaned node: %s! Remove from sliced part." %
                     nffg[node])
         nffg.del_node(node)
@@ -1726,7 +1729,7 @@ class NFFGToolBox(object):
           log.debug("Manually extended match field: %s" % flowrule.match)
 
   @classmethod
-  def rewrite_interdomain_tags (cls, slices,
+  def rewrite_interdomain_tags (cls, slices, flowrule_stitching=None,
                                 log=logging.getLogger("adaptation.TAG")):
     """
     Calculate and rewrite inter-domain tags.
@@ -1883,7 +1886,7 @@ class NFFGToolBox(object):
 
     for req in nffg.reqs:
       if req.src.node.type == NFFG.TYPE_SAP and \
-            req.dst.node.type == NFFG.TYPE_SAP:
+         req.dst.node.type == NFFG.TYPE_SAP:
         log.debug("Skip rebinding: Detected %s is already an end-to-end link!" %
                   req)
         return nffg
@@ -2029,6 +2032,11 @@ class NFFGToolBox(object):
     delay_matrix_cache = {}
     # Add existing SAPs and their connections to the SingleBiSBiS infra
     for sap in nffg.saps:
+      for p in sap.ports:
+        if str(p.id).startswith("EXTERNAL"):
+          log.debug("Detected EXTERNAL port: %s in SAP: %s! Skip adding..."
+                    % (p.id, sap.id))
+          continue
       c_sap = sbb.add_sap(sap_obj=sap.copy())
       log.debug("Added SAP: %s" % c_sap)
       log.log(VERBOSE, "SAP:\n%s" % c_sap.dump())
@@ -2121,8 +2129,8 @@ class NFFGToolBox(object):
       if fr_extra is not None:
         fr_action += ";%s" % fr_extra
       if value[0].node.type == NFFG.TYPE_SAP and \
-            value[1].node.type == NFFG.TYPE_NF and \
-            value[0].sap is not None:
+         value[1].node.type == NFFG.TYPE_NF and \
+         value[0].sap is not None:
         # Update action for flowrule connecting inter-domain SAP to NF
         fr_action += ";UNTAG"
       fr = sbb_src_port.add_flowrule(id=fr_hop,
@@ -2450,7 +2458,7 @@ class NFFGToolBox(object):
       del_nfs = []
       for src, dst, link in nffg.network.out_edges_iter(data=True):
         if link.type == NFFG.TYPE_LINK_DYNAMIC and \
-              link.dst.node.type == NFFG.TYPE_NF:
+           link.dst.node.type == NFFG.TYPE_NF:
           del_nfs.append(dst)
           del_ports.append(link.src.id)
       if del_nfs:
@@ -2615,9 +2623,9 @@ class NFFGToolBox(object):
           # If their status shall be considered AND the statuses are equal then
           # they are considered equal and it shouldn't be in the minuend.
           if not consider_vnf_status or (consider_vnf_status and
-                                             subtrahend.network.node[
-                                               n].status ==
-                                             minuend.network.node[n].status):
+                                         subtrahend.network.node[
+                                           n].status ==
+                                         minuend.network.node[n].status):
             for edge_func in (minuend.network.in_edges_iter,
                               minuend.network.out_edges_iter):
               for i, j, data in edge_func([n], data=True):
@@ -2674,7 +2682,7 @@ class NFFGToolBox(object):
     # left any more connected SGHops.
     for del_nf in del_nffg.nfs:
       if del_nf.id in old.network.nodes_iter() and \
-            del_nf.id not in new.network.nodes_iter():
+         del_nf.id not in new.network.nodes_iter():
         del_nf.operation = NFFG.OP_DELETE
 
     # The output ADD NFFG shall still include the Infras even if they were
@@ -3005,13 +3013,13 @@ class NFFGToolBox(object):
               sg_map[fr.id][1] = outbound_link.dst
               # the additional action is only present in the last flowrule of
               # the flowrule sequence.
-              for last_fr in nffg.network.node[outbound_link.src.node.id].\
-                                                             flowrules():
+              for last_fr in nffg.network.node[outbound_link.src.node.id]. \
+                 flowrules():
                 # we need to retrieve this last flowrule
                 if last_fr.id == fr.id:
                   # extract the additional action if there is any
                   additional_action = NFFGToolBox._extract_additional_actions(
-                                                  last_fr.action.split(";"))
+                    last_fr.action.split(";"))
                   sg_map[fr.id][6] = additional_action
                   break
 
@@ -3287,7 +3295,7 @@ class NFFGToolBox(object):
     :return: created graph object
     :rtype: :class:`DiGraph`
     """
-    exploded_G = networkx.DiGraph()
+    exploded_G = nx.DiGraph()
     for id, obj in G.nodes_iter(data=True):
       if obj.type == NFFG.TYPE_INFRA:
         static_ports_of_infra = filter(
@@ -3571,14 +3579,14 @@ class NFFGToolBox(object):
       exploded_G = NFFGToolBox.explodeGraphWithPortnodes(G,
                                                          id_connector_character)
 
-    exploded_dists = networkx.all_pairs_dijkstra_path_length(exploded_G,
+    exploded_dists = nx.all_pairs_dijkstra_path_length(exploded_G,
                                                              weight='delay')
     dists, min_dist_pairs = NFFGToolBox.extractDistsFromExploded(G,
                                                                  exploded_dists,
                                                                  id_connector_character)
 
     if return_paths:
-      exploded_paths = networkx.all_pairs_dijkstra_path(exploded_G,
+      exploded_paths = nx.all_pairs_dijkstra_path(exploded_G,
                                                         weight='delay')
       paths = NFFGToolBox.extractPathsFromExploded(exploded_paths,
                                                    min_dist_pairs,

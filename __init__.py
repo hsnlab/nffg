@@ -14,7 +14,14 @@
 """
 Internal graph-based implementation of Network Function Forwarding Graph
 """
+from networkx.release import get_info, major as nx_major
+
+# Enabled imports directly from nffg_lib package
 from nffg import NFFG, NFFGToolBox
+
+if int(nx_major) > 1:
+  raise RuntimeError(
+    "NetworkX version(<2.0): %s is not supported!" % get_info()[2])
 
 __version__ = nffg.VERSION
 __all__ = ["NFFG", "NFFGToolBox"]
